@@ -61,7 +61,7 @@ protected:
         }
     }
 
-    virtual NodePtr clone() const = 0;
+    // virtual NodePtr clone() const = 0;
 
 public:
     explicit BaseNode(base_node_type node_type) : 
