@@ -1,9 +1,11 @@
 #pragma once
 
+#include <cassert>
 #include <deque>
 #include <memory>
 #include <string>
 #include <vector>
+#include <stdexcept>
 
 namespace ast {
 
@@ -25,6 +27,22 @@ enum class base_node_type {
     input,
 };
 
+inline void ensure_child_free(bool already_set, 
+                              const char* msg) 
+{
+#ifndef NDEBUG
+    if (already_set) {
+        std::fputs(msg, stderr);
+        std::fputs("\n", stderr);
+        assert(!already_set);
+    }    
+#else 
+    if (already_set) {
+        throw std::logic_error(msg);
+    }
+#endif
+}
+
 class BaseNode
 {
 public:
@@ -43,14 +61,16 @@ protected:
         }
     }
 
+    virtual NodePtr clone() const = 0;
+
 public:
     explicit BaseNode(base_node_type node_type) : 
                 node_type_(node_type) {}
     virtual ~BaseNode() = default;
 
-    base_node_type node_type() const  { return node_type_; }
-    BaseNode*      parent() const     { return parent_; }
-    void set_parent(BaseNode* parent) { parent_ = parent; }
+    base_node_type node_type() const            { return node_type_; }
+    BaseNode*      parent() const               { return parent_; }
+    void           set_parent(BaseNode* parent) { parent_ = parent; }
 
     void add_child(NodePtr child)
     {
@@ -77,7 +97,7 @@ class ValueNode : public BaseNode
 public:
     explicit ValueNode(int value) 
              : BaseNode(base_node_type::value), value_(value) {}
-    int value() const { return value_; }
+    int  value() const { return value_; }
     void accept(Visitor& v) override;
 };
 
@@ -103,6 +123,8 @@ public:
 
     void set_operand(NodePtr operand)
     {
+        ensure_child_free(children().size() != 0, 
+                          "operand is already set");
         add_child(std::move(operand));
     }
 
@@ -124,7 +146,7 @@ class PrintNode : public BaseNode
 public:
     PrintNode() : BaseNode(base_node_type::print) {}
 
-    explicit PrintNode(NodePtr expr)
+    explicit PrintNode(NodePtr expr = nullptr)
         : BaseNode(base_node_type::print)
     {
         if (expr) {
@@ -134,6 +156,8 @@ public:
 
     void set_expr(NodePtr expr)
     {
+        ensure_child_free(children().size() != 0, 
+                          "expr is already set");
         add_child(std::move(expr));
     }
 
@@ -150,33 +174,44 @@ public:
 
 class AssignNode : public BaseNode
 {
+    bool is_lhs_set = false;
+    bool is_rhs_set = false;
 public:
     AssignNode() : BaseNode(base_node_type::assign) {}
 
-    AssignNode(NodePtr lhs, NodePtr rhs)
+    AssignNode(NodePtr lhs = nullptr, 
+               NodePtr rhs = nullptr)
         : BaseNode(base_node_type::assign)
     {
         if (lhs) {
             set_lhs(std::move(lhs));
+        } else {
+            is_lhs_set = false;
         }
         if (rhs) {
             set_rhs(std::move(rhs));
+        } else {
+            is_rhs_set = false;
         }
     }
 
     void set_lhs(NodePtr lhs)
     {
+        ensure_child_free(is_lhs_set, "lhs is already set");
         add_child(std::move(lhs));
+        is_lhs_set = true;
     }
 
     void set_rhs(NodePtr rhs)
     {
+        ensure_child_free(is_rhs_set, "rhs is already set");
         add_child(std::move(rhs));
+        is_rhs_set = true;
     }
 
     const BaseNode* lhs() const
     {
-        if (children().size() > 0) {
+        if (children().size() > 0 && is_lhs_set) {
             return children()[0].get();
         }
         return nullptr;
@@ -184,7 +219,7 @@ public:
 
     const BaseNode* rhs() const
     {
-        if (children().size() > 1) {
+        if (children().size() > 1 && is_rhs_set) {
             return children()[1].get();
         }
         return nullptr;
@@ -208,32 +243,57 @@ public:
 
 class IfNode : public BaseNode
 {
+    bool is_condition_set = false;
+    bool is_then_set = false;
+    bool is_else_set = false;
 public:
     IfNode() : BaseNode(base_node_type::if_node) {}
 
-    IfNode(NodePtr condition, 
-           NodePtr then_branch, 
+    IfNode(NodePtr condition   = nullptr, 
+           NodePtr then_branch = nullptr, 
            NodePtr else_branch = nullptr)
         : BaseNode(base_node_type::if_node)
     {
         if (condition) {
             set_condition(std::move(condition));
+        } else {
+            is_condition_set = false;
         }
         if (then_branch) {
             set_then(std::move(then_branch));
+        } else {
+            is_then_set = false;
         }
         if (else_branch) {
             set_else(std::move(else_branch));
+        } else {
+            is_else_set = false;
         }
     }
 
-    void set_condition(NodePtr cond)   { add_child(std::move(cond)); }
-    void set_then(NodePtr then_branch) { add_child(std::move(then_branch)); }
-    void set_else(NodePtr else_branch) { add_child(std::move(else_branch)); }
+    void set_condition(NodePtr cond)   
+    {
+        ensure_child_free(is_condition_set, "condition is already set");
+        add_child(std::move(cond));
+        is_condition_set = true;
+    }
+    void set_then(NodePtr then_branch) 
+    {
+        ensure_child_free(is_then_set, "then is already set");
+        add_child(std::move(then_branch));
+        is_then_set = true;
+    }
+    void set_else(NodePtr else_branch) 
+    {
+        ensure_child_free(is_else_set, "else is already set");
+        add_child(std::move(else_branch));
+        is_else_set = true;
+    }
 
+    //TODO: придумать, как понять, что я возвращаю именно то, что надо 
     const BaseNode* condition() const
     {
-        if (children().size() > 0) {
+        if (children().size() > 0 && is_condition_set) {
             return children()[0].get();
         }
         return nullptr;
@@ -241,7 +301,7 @@ public:
 
     const BaseNode* then_branch() const
     {
-        if (children().size() > 1) {
+        if (children().size() > 1 && is_then_set) {
             return children()[1].get();
         }
         return nullptr;
@@ -249,7 +309,7 @@ public:
 
     const BaseNode* else_branch() const
     {
-        if (children().size() > 2) {
+        if (children().size() > 2 && is_else_set) {
             return children()[2].get();
         }
         return nullptr;
@@ -260,26 +320,43 @@ public:
 
 class WhileNode : public BaseNode
 {
+    bool is_condition_set = false;
+    bool is_body_set = false;
 public:
     WhileNode() : BaseNode(base_node_type::while_node) {}
 
-    WhileNode(NodePtr condition, NodePtr body)
+    WhileNode(NodePtr condition = nullptr, 
+              NodePtr body      = nullptr)
         : BaseNode(base_node_type::while_node)
     {
         if (condition) {
             set_condition(std::move(condition));
+        } else {
+            is_condition_set = false;
         }
         if (body) {
             set_body(std::move(body));
+        } else {
+            is_body_set = false;
         }
     }
 
-    void set_condition(NodePtr cond) { add_child(std::move(cond)); }
-    void set_body(NodePtr body)      { add_child(std::move(body)); }
+    void set_condition(NodePtr cond) 
+    {
+        ensure_child_free(is_condition_set, "condition is already set");
+        add_child(std::move(cond));
+        is_condition_set = true;
+    }
+    void set_body(NodePtr body)
+    {
+        ensure_child_free(is_body_set, "body is already set");
+        add_child(std::move(body));
+        is_body_set = true;
+    }
 
     const BaseNode* condition() const
     {
-        if (children().size() > 0) {
+        if (children().size() > 0 && is_condition_set) {
             return children()[0].get();
         }
         return nullptr;
@@ -287,7 +364,7 @@ public:
 
     const BaseNode* body() const
     {
-        if (children().size() > 1) {
+        if (children().size() > 1 && is_body_set) {
             return children()[1].get();
         }
         return nullptr;
@@ -311,6 +388,7 @@ public:
 
     void set_lhs(NodePtr lhs)
     {
+        ensure_child_free(children().size() != 0, "lhs is already set");
         add_child(std::move(lhs));
     }
 
@@ -365,6 +443,8 @@ enum class bin_arith_op_type {
 class BinArithOpNode : public BaseNode
 {
     bin_arith_op_type op_;
+    bool is_left_set  = false ;
+    bool is_right_set = false;
 
 public:
     explicit BinArithOpNode(bin_arith_op_type op, 
@@ -374,19 +454,34 @@ public:
     {
         if (left) {
             set_left(std::move(left));
+        } else {
+            is_left_set = false;
         }
         if (right) {
             set_right(std::move(right));
+        } else {
+            is_right_set = false;
         }
     }
 
-    void set_left(NodePtr child)  { add_child_front(std::move(child)); }
-    void set_right(NodePtr child) { add_child(std::move(child)); }
+    void set_left(NodePtr child)  
+    {
+        ensure_child_free(is_left_set, "left is already set");
+        add_child(std::move(child));
+        is_left_set = true;
+    }
+    
+    void set_right(NodePtr child) 
+    {
+        ensure_child_free(is_right_set, "right is already set");
+        add_child(std::move(child));
+        is_right_set = true;
+    }
 
     bin_arith_op_type op() const { return op_; }
     const BaseNode* left() const 
     { 
-        if (children().size() > 0) {
+        if (children().size() > 0 && is_left_set) {
             return children()[0].get();
         }
         return nullptr;
@@ -394,7 +489,7 @@ public:
 
     const BaseNode* right() const 
     { 
-        if (children().size() > 1) {
+        if (children().size() > 1 && is_right_set) {
             return children()[1].get();
         }
         return nullptr;
@@ -416,6 +511,8 @@ enum class bin_logic_op_type {
 class BinLogicOpNode : public BaseNode
 {
     bin_logic_op_type op_;
+    bool is_left_set  = false;  
+    bool is_right_set = false; 
 
 public:
     explicit BinLogicOpNode(bin_logic_op_type op, 
@@ -425,19 +522,33 @@ public:
     {
         if (left) {
             set_left(std::move(left));
+        } else {
+            is_left_set = false;
         }
         if (right) {
             set_right(std::move(right));
+        } else {
+            is_right_set = false;
         }
     }
 
-    void set_left(NodePtr child)  { add_child_front(std::move(child)); }
-    void set_right(NodePtr child) { add_child(std::move(child)); }
+    void set_left(NodePtr child)  
+    {
+        ensure_child_free(is_left_set, "left is already set");
+        add_child(std::move(child));
+        is_left_set = true;
+    }
+    void set_right(NodePtr child) 
+    {
+        ensure_child_free(is_right_set, "right is already set");
+        add_child(std::move(child));
+        is_right_set = true;
+    }
 
     bin_logic_op_type op() const { return op_; }
     const BaseNode* left() const 
     { 
-        if (children().size() > 0) 
+        if (children().size() > 0 && is_left_set) 
             return children()[0].get();
         
         return nullptr;
@@ -445,7 +556,7 @@ public:
 
     const BaseNode* right() const 
     { 
-        if (children().size() > 1) 
+        if (children().size() > 1 && is_right_set) 
             return children()[1].get();
         
         return nullptr;

@@ -1,8 +1,8 @@
 #include <fstream>
 #include <memory>
 
-#include "include/AST.hpp"
-#include "include/DotVisitor.hpp"
+#include "../include/AST.hpp"
+#include "../include/DotVisitor.hpp"
 
 using namespace ast;
 
