@@ -97,7 +97,7 @@ class ValueNode : public BaseNode
 public:
     explicit ValueNode(int value) 
              : BaseNode(base_node_type::value), value_(value) {}
-    int  value() const { return value_; }
+    int value() const { return value_; }
     void accept(Visitor& v) override;
 };
 
@@ -146,7 +146,7 @@ class PrintNode : public BaseNode
 public:
     PrintNode() : BaseNode(base_node_type::print) {}
 
-    explicit PrintNode(NodePtr expr = nullptr)
+    explicit PrintNode(NodePtr expr)
         : BaseNode(base_node_type::print)
     {
         if (expr) {
