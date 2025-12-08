@@ -1,0 +1,23 @@
+include(FetchContent)
+
+set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+
+FetchContent_Declare(
+    googletest
+    URL https://github.com/google/googletest/archive/refs/tags/v1.17.0.zip
+)
+
+FetchContent_MakeAvailable(googletest)
+
+add_executable(ast_clone_test
+    ast_clone_test.cpp
+)
+
+target_link_libraries(ast_clone_test
+    PRIVATE
+        paracl_core
+        GTest::gtest_main
+)
+
+include(GoogleTest)
+gtest_discover_tests(ast_clone_test)
