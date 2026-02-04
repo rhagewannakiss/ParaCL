@@ -5,6 +5,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+
 #ifdef NDEBUG
 #include <stdexcept>
 #endif
@@ -186,11 +187,10 @@ public:
     UnOpNode& operator=(const UnOpNode& other) {
         if (this == &other) return *this;
         BaseNode::operator=(other);
-        children().clear();
+        op_ = other.op_;
         if (other.operand()) {
             set_operand(other.operand()->clone());
         }
-        op_ = other.op_;
         return *this;
     }
 
@@ -246,7 +246,6 @@ public:
     {
         if(this == &other) return *this;
         BaseNode::operator=(other);
-        children().clear();
         if (other.expr()) {
             set_expr(other.expr()->clone());
         }
@@ -317,7 +316,6 @@ public:
         BaseNode::operator=(other);
         is_lhs_set = false;
         is_rhs_set = false;
-        children().clear();
         if (other.lhs()) {
             set_lhs(other.lhs()->clone());
         }
@@ -446,7 +444,6 @@ public:
         is_then_set      = false;
         is_else_set      = false;
 
-        children().clear();
         if(other.condition()) {
             set_condition(other.condition()->clone());
         }
@@ -551,7 +548,6 @@ public:
         is_condition_set = false;
         is_body_set      = false;
 
-        children().clear();
         if(other.condition()) {
             set_condition(other.condition()->clone());
         }
@@ -623,7 +619,6 @@ public:
     InputNode& operator=(const InputNode& other) {
         if(this == &other) return *this;
         BaseNode::operator=(other);
-        children().clear();
         if (other.lhs()) {
             set_lhs(other.lhs()->clone());
         }
@@ -677,7 +672,6 @@ public:
     ExprNode& operator=(const ExprNode& other) {
         if(this == &other) return *this;
         BaseNode::operator=(other);
-        children().clear();
         if (other.expr()) {
             set_expr(other.expr()->clone());
         }
@@ -755,7 +749,6 @@ public:
         op_ = other.op_;
         is_left_set = false;
         is_right_set = false;
-        children().clear();
         if (other.left()) {
             set_left(other.left()->clone());
         }
@@ -783,7 +776,7 @@ public:
     }
 
     bin_arith_op_type op() const { return op_; }
-    const BaseNode* left() const 
+    BaseNode* left() 
     { 
         if (children().size() > 0 && is_left_set) {
             return children()[0].get();
@@ -791,7 +784,7 @@ public:
         return nullptr;
     }
 
-    const BaseNode* right() const 
+    BaseNode* right() 
     { 
         if (children().size() > 1 && is_right_set) {
             return children()[1].get();
@@ -856,7 +849,6 @@ public:
         op_ = other.op_;
         is_left_set = false;
         is_right_set = false;
-        children().clear();
         if (other.left()) {
             set_left(other.left()->clone());
         }
@@ -926,7 +918,6 @@ public:
     ScopeNode& operator=(const ScopeNode& other) {
         if (this == &other) return *this;
         BaseNode::operator=(other);
-        children().clear();
         for (auto& child : other.children()) {
             add_child(child->clone());
         }
