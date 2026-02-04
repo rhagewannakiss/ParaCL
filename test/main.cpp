@@ -58,9 +58,5 @@ int main()
 
     std::ofstream out("ast.dot");
     DotVisitor dv(out);
-    dv.begin_graph();
-    if (ast.root()) {
-        ast.root()->accept(dv);
-    }
-    dv.end_graph();
+    dv.create_dot(ast);
 }

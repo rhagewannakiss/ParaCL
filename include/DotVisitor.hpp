@@ -4,6 +4,7 @@
 #include <sstream>
 #include <string>
 #include <unordered_map>
+#include <fstream>
 
 #include "Visitor.hpp"
 
@@ -112,6 +113,15 @@ public:
         for (const auto& child : node.children()) {
             child->accept(*this);
         }
+    }
+
+    void create_dot(ast::AST& ast) 
+    {
+        begin_graph();
+        if(ast.root()) {
+            ast.root()->accept(*this);
+        }
+        end_graph();
     }
 
     void begin_graph() { out_ << "digraph AST {\n"; }

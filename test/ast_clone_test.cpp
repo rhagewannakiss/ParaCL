@@ -123,9 +123,8 @@ bool check_node_equality_val(const ast::BaseNode* node1,
                 return true;
             }
         case ast::base_node_type::base:
-            assert(false);
         default:
-            break;
+            return false;
     }
     return false;
 }
