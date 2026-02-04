@@ -115,6 +115,8 @@ public:
         }
     }
 
+
+//TODO: добавить константный Visitor и переписать DotVisitor на DotConstVisitor
     void create_dot(ast::AST& ast) 
     {
         begin_graph();

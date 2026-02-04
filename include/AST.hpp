@@ -5,6 +5,7 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <cstdio>
 
 #ifdef NDEBUG
 #include <stdexcept>
@@ -683,6 +684,9 @@ public:
 
     void set_expr(NodePtr expr)
     {
+        if(children().size() > 0) {
+            ensure_child_free(true, "expr is already set");
+        }
         add_child(std::move(expr));
     }
 
@@ -776,7 +780,8 @@ public:
     }
 
     bin_arith_op_type op() const { return op_; }
-    BaseNode* left() 
+    
+    const BaseNode* left() const 
     { 
         if (children().size() > 0 && is_left_set) {
             return children()[0].get();
@@ -784,13 +789,30 @@ public:
         return nullptr;
     }
 
-    BaseNode* right() 
+    const BaseNode* right() const 
     { 
         if (children().size() > 1 && is_right_set) {
             return children()[1].get();
         }
         return nullptr;
     }
+
+    BaseNode* left()
+    { 
+        if (children().size() > 0 && is_left_set) {
+            return children()[0].get();
+        }
+        return nullptr;
+    }
+
+    BaseNode* right()
+    { 
+        if (children().size() > 1 && is_right_set) {
+            return children()[1].get();
+        }
+        return nullptr;
+    }
+
     void accept(Visitor& v) override;
     NodePtr clone() const override {
         return std::make_unique<BinArithOpNode>(*this);
