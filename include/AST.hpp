@@ -28,6 +28,7 @@ enum class base_node_type {
     if_node,
     while_node,
     input,
+    var_decl
 };
 
 inline void ensure_child_free(bool already_set, 
@@ -215,6 +216,14 @@ public:
         return nullptr;
     }
 
+    BaseNode* operand()
+    {
+        if (children().size() > 0) {
+            return children()[0].get();
+        }
+        return nullptr;
+    }
+
     void accept(Visitor& v) override;
     
     NodePtr clone() const override {
@@ -264,6 +273,14 @@ public:
     }
 
     const BaseNode* expr() const
+    {
+        if (children().size() > 0) {
+            return children()[0].get();
+        }
+        return nullptr;
+    }
+
+    BaseNode* expr()
     {
         if (children().size() > 0) {
             return children()[0].get();
@@ -352,6 +369,22 @@ public:
     }
 
     const BaseNode* rhs() const
+    {
+        if (children().size() > 1 && is_rhs_set) {
+            return children()[1].get();
+        }
+        return nullptr;
+    }
+
+    BaseNode* lhs()
+    {
+        if (children().size() > 0 && is_lhs_set) {
+            return children()[0].get();
+        }
+        return nullptr;
+    }
+
+    BaseNode* rhs()
     {
         if (children().size() > 1 && is_rhs_set) {
             return children()[1].get();
@@ -503,6 +536,30 @@ public:
         return nullptr;
     }
 
+    BaseNode* condition()
+    {
+        if (children().size() > 0 && is_condition_set) {
+            return children()[0].get();
+        }
+        return nullptr;
+    }
+
+    BaseNode* then_branch()
+    {
+        if (children().size() > 1 && is_then_set) {
+            return children()[1].get();
+        }
+        return nullptr;
+    }
+
+    BaseNode* else_branch()
+    {
+        if (children().size() > 2 && is_else_set) {
+            return children()[2].get();
+        }
+        return nullptr;
+    }
+
     void accept(Visitor& v) override;
     NodePtr clone() const override {
         return std::make_unique<IfNode>(*this);
@@ -590,6 +647,22 @@ public:
         return nullptr;
     }
 
+    BaseNode* condition()
+    {
+        if (children().size() > 0 && is_condition_set) {
+            return children()[0].get();
+        }
+        return nullptr;
+    }
+
+    BaseNode* body()
+    {
+        if (children().size() > 1 && is_body_set) {
+            return children()[1].get();
+        }
+        return nullptr;
+    }
+
     void accept(Visitor& v) override;
     NodePtr clone() const override {
         return std::make_unique<WhileNode>(*this);
@@ -636,6 +709,14 @@ public:
     }
 
     const BaseNode* lhs() const
+    {
+        if (children().size() > 0) {
+            return children()[0].get();
+        }
+        return nullptr;
+    }
+
+    BaseNode* lhs()
     {
         if (children().size() > 0) {
             return children()[0].get();
@@ -691,6 +772,14 @@ public:
     }
 
     const BaseNode* expr() const
+    {
+        if (children().size() > 0) {
+            return children()[0].get();
+        }
+        return nullptr;
+    }
+
+    BaseNode* expr()
     {
         if (children().size() > 0) {
             return children()[0].get();
@@ -912,6 +1001,23 @@ public:
         
         return nullptr;
     }
+
+    BaseNode* left()
+    { 
+        if (children().size() > 0 && is_left_set) 
+            return children()[0].get();
+        
+        return nullptr;
+    }
+
+    BaseNode* right()
+    { 
+        if (children().size() > 1 && is_right_set) 
+            return children()[1].get();
+        
+        return nullptr;
+    }
+
     void accept(Visitor& v) override;
     NodePtr clone() const override {
         return std::make_unique<BinLogicOpNode>(*this);
@@ -958,6 +1064,79 @@ public:
     void accept(Visitor& v) override;
     NodePtr clone() const override {
         return std::make_unique<ScopeNode>(*this);
+    }
+};
+
+class VarDeclNode : public BaseNode
+{
+    std::string name_;
+    bool is_init_set = false;
+public:
+    explicit VarDeclNode(std::string name, NodePtr init=nullptr) : 
+        BaseNode(base_node_type::var_decl),
+        name_(std::move(name)) 
+    {
+        if(init != nullptr)
+            set_init_expr(std::move(init));
+    }
+
+    VarDeclNode(const VarDeclNode& other) : 
+        BaseNode(other),
+        name_(other.name_) 
+    {
+        const auto& child = other.init_expr();
+        if(child != nullptr)
+            set_init_expr(child->clone());
+    }
+
+    VarDeclNode& operator=(const VarDeclNode& other) 
+    {
+        if(this == &other) return *this;
+        BaseNode::operator=(other);
+        const auto& child = other.init_expr();
+        if(child != nullptr)
+        {
+            is_init_set = false;
+            set_init_expr(child->clone());
+        }
+        name_ = other.name_;
+        return *this;
+    }
+
+    VarDeclNode(VarDeclNode&& other) noexcept = default;
+    VarDeclNode& operator=(VarDeclNode&& other) noexcept = default;
+
+    void set_init_expr(NodePtr expr) {
+        ensure_child_free(is_init_set, "Initializer is already set");
+        add_child(std::move(expr));
+        is_init_set = true;
+    }
+    
+    BaseNode* init_expr() 
+    {
+        if(is_init_set && children().size() > 0) {
+            return children()[0].get();
+        } else {
+            return nullptr;
+        }
+    }
+
+    const BaseNode* init_expr() const 
+    {
+        if(is_init_set && children().size() > 0) {
+            return children()[0].get();
+        } else {
+            return nullptr;
+        }
+    }
+
+    const std::string& name() const
+    { return name_; }
+
+    
+    void accept(Visitor& v) override;
+    NodePtr clone() const override {
+        return std::make_unique<VarDeclNode>(*this);
     }
 };
 
