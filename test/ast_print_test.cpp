@@ -1,7 +1,6 @@
 #include <filesystem>
 #include <fstream>
 #include <memory>
-#include <sys/stat.h>
 
 #include "../include/AST.hpp"
 #include "../include/DotVisitor.hpp"
@@ -65,5 +64,5 @@ int main()
     out.flush();
 
     int res = std::system("dot -Tpng test/dump/ast.dot -o test/dump/ast.png");
-    return res;
+    return res == 0 ? 0 : 1;
 }
