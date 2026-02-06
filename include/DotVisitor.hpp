@@ -9,6 +9,7 @@
 #include "Visitor.hpp"
 
 namespace ast {
+//TODO: добавить константный Visitor и переписать DotVisitor на DotConstVisitor
 
 class DotVisitor : public Visitor
 {
@@ -115,8 +116,15 @@ public:
         }
     }
 
+    void visit(VarDeclNode& node) override
+    {
+        emit_node(node, "var_decl " + node.name());
+        emit_edges(node);
+        const auto& init_expr = node.init_expr();
+        if(init_expr != nullptr)
+            init_expr->accept(*this);
+    }
 
-//TODO: добавить константный Visitor и переписать DotVisitor на DotConstVisitor
     void create_dot(ast::AST& ast) 
     {
         begin_graph();
@@ -178,6 +186,7 @@ private:
             case base_node_type::while_node:   return "while";
             case base_node_type::input:        return "input";
             case base_node_type::base:         return "base";
+            case base_node_type::var_decl:     return "var_decl";
         }
         return "unknown";
     }
