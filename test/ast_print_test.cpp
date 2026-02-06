@@ -1,3 +1,4 @@
+#include <filesystem>
 #include <fstream>
 #include <memory>
 
@@ -56,7 +57,12 @@ int main()
     auto root = std::make_unique<ScopeNode>(std::move(stmts));
     AST ast(std::move(root));
 
-    std::ofstream out("ast.dot");
+    std::filesystem::create_directories("test/dump");
+    std::ofstream out("test/dump/ast.dot");
     DotVisitor dv(out);
     dv.create_dot(ast);
+    out.flush();
+
+    int res = std::system("dot -Tpng test/dump/ast.dot -o test/dump/ast.png");
+    return res == 0 ? 0 : 1;
 }

@@ -19,5 +19,14 @@ target_link_libraries(ast_clone_test
         GTest::gtest_main
 )
 
+add_executable(ast_print_test
+    ast_print_test.cpp
+)
+
+target_link_libraries(ast_print_test
+    PRIVATE
+        paracl_core
+)
+
 include(GoogleTest)
 gtest_discover_tests(ast_clone_test)
