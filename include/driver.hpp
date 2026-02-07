@@ -2,11 +2,10 @@
 #define DRIVER_HPP
 
 #include "grammar.tab.hh"
-#include "location.hh"
 #include <FlexLexer.h>
 
 #include <iostream>
-#include <memory>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -16,7 +15,7 @@ class NumDriver {
 private:
     FlexLexer* plex_;
     location loc_;
-
+    std::map<std::string, int> variables_;
     std::vector<std::pair<std::vector<int>, std::vector<int>>> equations_;
 
 public:
@@ -58,6 +57,25 @@ public:
 
     const location& get_location() const {
         return loc_;
+    }
+
+    void insert(std::vector<std::pair<std::vector<int>, std::vector<int>>> v) {
+        equations_.assign(v.rbegin(), v.rend());
+    }
+
+    void printout() const {
+        for (const auto& eq : equations_) {
+            int sum_left = 0;
+            for (int val : eq.first) {
+                sum_left += val;
+            }
+            int sum_right = 0;
+            for (int val : eq.second) {
+                sum_right += val;
+            }
+            std::cout << "Checking: " << sum_left << " vs " << sum_right
+                      << "; Result: " << (sum_left == sum_right) << std::endl;
+        }
     }
 };
 

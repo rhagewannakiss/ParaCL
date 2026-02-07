@@ -1,11 +1,11 @@
 %language "c++"
-
 %skeleton "lalr1.cc"
 %defines
 %define api.value.type variant
+%define parse.error verbose
 %locations
-%define api.location.file "location.hh"
-%param {yy::Driver* driver}
+
+%param {yy::NumDriver* driver}
 
 %code requires
 {
@@ -13,7 +13,7 @@
 #include <string>
 #include <vector>
 
-namespace yy { class Driver; }
+namespace yy { class NumDriver; }
 }
 
 %code
@@ -23,55 +23,61 @@ namespace yy { class Driver; }
 namespace yy {
 
 parser::token_type yylex(parser::semantic_type* yylval,
-                         Driver* driver);
+                         parser::location_type* yylloc,
+                         NumDriver* driver);
 }
 }
 
 %token
-  PLUS                "+"
-  MINUS               "-"
-  DIV                 "/"
-  MUL                 "*"
-  MODULUS             "%"
-  ASSIGNMENT          "="
-  SEMICOLON           ";"
-  COLON               ","
-  LESS                "<"
-  GREATER             ">"
-  LESS_OR_EQUAL       "<="
-  GREATER_OR_EQUAL    ">="
-  QUESTION_MARK       "?"
-  NOT                 "!"
-  EQUAL               "=="
-  NOT_EQUAL           "!="
-  AND                 "&&"
-  OR                  "||"
-  XOR                 "^"
-  RIGHT_ROUND_BRACKER ")"
-  LEFT_ROUND_BRACKER  "("
-  RIGHT_CURLY_BRACKER "}"
-  LEFT_CURLY_BRACKER  "{"
-  IF                  "if"
-  ELSE                "else"
-  WHILE               "while"
-  ERR
+    PLUS                 "+"
+    MINUS                "-"
+    DIV                  "/"
+    MUL                  "*"
+    MODULUS              "%"
+    ASSIGNMENT           "="
+    SEMICOLON            ";"
+    COMMA                ","
+    LESS                 "<"
+    GREATER              ">"
+    LESS_OR_EQUAL        "<="
+    GREATER_OR_EQUAL     ">="
+    QUESTION_MARK        "?"
+    NOT                  "!"
+    EQUAL                "=="
+    NOT_EQUAL            "!="
+    AND                  "&&"
+    OR                   "||"
+    XOR                  "^"
+    RIGHT_PAREN          ")"
+    LEFT_PAREN           "("
+    RIGHT_CURLY_BRACKET  "}"
+    LEFT_CURLY_BRACKET   "{"
+    IF                  "if"
+    ELSE                "else"
+    WHILE               "while"
+    PRINT               "print"
+    INPUT               "input"
+    NEWLINE
+    ERR
 ;
 
 %token <int> NUMBER
 %token <std::string> VAR
 
-%nterm <std::vector<int>> expr
-%nterm <std::pair<std::vector<int>, std::vector<int>>> equals
-%nterm <std::vector<std::pair<std::vector<int>, std::vector<int>>>> eqlist
+%nterm <int> expr
+%nterm <int> stmt
+%nterm <int> stmts
+%nterm <int> program
 
-%left XOR
+%right ASSIGNMENT
 %left OR
+%left XOR
 %left AND
+%nonassoc EQUAL NOT_EQUAL
+%nonassoc LESS GREATER LESS_OR_EQUAL GREATER_OR_EQUAL
 %left PLUS MINUS
 %left MUL DIV MODULUS
-%right ASSIGNMENT
-%nonassoc EQUAL NOT_EQUAL BELOW GREATER EQUAL_OR_BELOW EQUAL_OR_GREATER
-%nonassoc UMINUS NOT
+%right UMINUS NOT
 %nonassoc XIF
 %nonassoc ELSE
 
@@ -79,19 +85,157 @@ parser::token_type yylex(parser::semantic_type* yylval,
 
 %%
 
-program: eqlist                   { driver->insert($1); }
+program: stmts
+    {
+    }
 ;
 
-eqlist: equals SEMICOLON eqlist   { $$ = $3; $$.push_back($1); }
-      | equals SEMICOLON          { $$.push_back($1);          }
+stmts: stmt stmts
+    {
+        $$ = $2;
+    }
+    | %empty
+    {
+        $$ = 0;
+    }
 ;
 
-equals: expr EQUAL expr           { $$ = std::make_pair($1, $3); }
+stmt: expr SEMICOLON
+    {
+        $$ = $1;
+    }
+    | SEMICOLON
+    {
+    }
+    | IF LEFT_PAREN expr RIGHT_PAREN stmt %prec XIF
+    {
+        if ($3) {
+            = $5;
+        } else {
+            = 0;
+        }
+    }
+    | IF LEFT_PAREN expr RIGHT_PAREN stmt ELSE stmt
+    {
+        if ($3) {
+            = $5;
+        } else {
+            = $7;
+        }
+    }
+    | WHILE LEFT_PAREN expr RIGHT_PAREN stmt
+    {
+        int result = 0;
+        while ($3) {
+            result = $5;
+        }
+        $$ = result;
+    }
+    | LEFT_CURLY_BRACKET stmts RIGHT_CURLY_BRACKET
+    {
+        $$ = $2;
+    }
+    | PRINT expr SEMICOLON
+    {
+        std::cout << $2 << std::endl;
+    }
+    | NEWLINE
+    {
+        driver->newline();
+    }
 ;
 
-expr: NUMBER                      { $$.push_back($1); }
-    | expr PLUS NUMBER            { $$ = $1; $$.push_back($3); }
-    | expr MINUS NUMBER           { $$ = $1; $$.push_back(-$3); }
+expr: expr PLUS expr
+    {
+        $$ = $1 + $3;
+    }
+    | expr MINUS expr
+    {
+        $$ = $1 - $3;
+    }
+    | expr MUL expr
+    {
+        $$ = $1 * $3;
+    }
+    | expr DIV expr
+    {
+        $$ = $1 / $3;
+    }
+    | expr MODULUS expr
+    {
+        $$ = $1 % $3;
+    }
+    | expr EQUAL expr
+    {
+        $$ = ($1 == $3);
+    }
+    | expr NOT_EQUAL expr
+    {
+        $$ = ($1 != $3);
+    }
+    | expr LESS expr
+    {
+        $$ = ($1 < $3);
+    }
+    | expr GREATER expr
+    {
+        $$ = ($1 > $3);
+    }
+    | expr LESS_OR_EQUAL expr
+    {
+        $$ = ($1 <= $3);
+    }
+    | expr GREATER_OR_EQUAL expr
+    {
+        $$ = ($1 >= $3);
+    }
+    | expr AND expr
+    {
+        $$ = ($1 && $3);
+    }
+    | expr OR expr
+    {
+        $$ = ($1 || $3);
+    }
+    | expr XOR expr
+    {
+        $$ = ($1 ^ $3);
+    }
+    | NOT expr
+    {
+        $$ = !$2;
+    }
+    | MINUS expr %prec UMINUS
+    {
+        $$ = -$2;
+    }
+    | PLUS expr %prec UMINUS
+    {
+        $$ = $2;
+    }
+    | LEFT_PAREN expr RIGHT_PAREN
+    {
+        $$ = $2;
+    }
+    | NUMBER
+    {
+        $$ = $1;
+    }
+    | VAR
+    {
+        $$ = driver->get_var($1);
+    }
+    | VAR ASSIGNMENT expr
+    {
+        driver->set_var($1, $3);
+        $$ = $3;
+    }
+    | INPUT
+    {
+        int val;
+        std::cin >> val;
+        $$ = val;
+    }
 ;
 
 %%
@@ -99,10 +243,15 @@ expr: NUMBER                      { $$.push_back($1); }
 namespace yy {
 
 parser::token_type yylex(parser::semantic_type* yylval,
+                         parser::location_type* yylloc,
                          NumDriver* driver)
 {
-  return driver->yylex(yylval);
+    return driver->yylex(yylval, yylloc);
 }
 
-void parser::error(const std::string&){}
+void parser::error(const location_type& loc, const std::string& msg) {
+    std::cerr << "Error at " << loc.begin.line << ":" << loc.begin.column
+              << ": " << msg << std::endl;
 }
+
+} // namespace yy

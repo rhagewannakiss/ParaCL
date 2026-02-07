@@ -1,4 +1,5 @@
 %option C++
+%option noyywrap
 
 %{
 
@@ -13,9 +14,9 @@ NUMBER            [0-9]+
 
 %%
 
-{NLINE}             {//TODO }
+{NLINE}             { return yy::parser::token_type::NEWLINE;}
 "//".*              {/* skip comments */}
-{WHSP}              {/* skip whitespace */}
+{WS}                {/* skip whitespace */}
 "+"                 { return yy::parser::token_type::PLUS; }
 "-"                 { return yy::parser::token_type::MINUS; }
 "/"                 { return yy::parser::token_type::DIV; }
@@ -23,7 +24,7 @@ NUMBER            [0-9]+
 "%"                 { return yy::parser::token_type::MODULUS; }
 "="                 { return yy::parser::token_type::ASSIGNMENT; }
 ";"                 { return yy::parser::token_type::SEMICOLON; }
-","                 { return yy::parser::token_type::COLON; }
+","                 { return yy::parser::token_type::COMMA; }
 "<"                 { return yy::parser::token_type::LESS; }
 ">"                 { return yy::parser::token_type::GREATER; }
 "<="                { return yy::parser::token_type::LESS_OR_EQUAL; }
@@ -35,13 +36,15 @@ NUMBER            [0-9]+
 "&&"                { return yy::parser::token_type::AND; }
 "||"                { return yy::parser::token_type::OR; }
 "^"                 { return yy::parser::token_type::XOR; }
-")"                 { return yy::parser::token_type::RIGHT_ROUND_BRACKER; }
-"("                 { return yy::parser::token_type::LEFT_ROUND_BRACKER; }
-"}"                 { return yy::parser::token_type::RIGHT_CURLY_BRACKER; }
-"{"                 { return yy::parser::token_type::LEFT_CURLY_BRACKER; }
+")"                 { return yy::parser::token_type::RIGHT_ROUND_BRACKET; }
+"("                 { return yy::parser::token_type::LEFT_ROUND_BRACKET; }
+"}"                 { return yy::parser::token_type::RIGHT_CURLY_BRACKET; }
+"{"                 { return yy::parser::token_type::LEFT_CURLY_BRACKET; }
 "if"                { return yy::parser::token_type::IF; }
 "else"              { return yy::parser::token_type::ELSE; }
 "while"             { return yy::parser::token_type::WHILE; }
+"print"             { return yy::parser::token_type::PRINT; }
+"input"             { return yy::parser::token_type::INPUT; }
 {NUMBER}            { return yy::parser::token_type::NUMBER; }
 {VAR}               { return yy::parser::token_type::VAR; }
 .			        { return yy::parser::token_type::ERR; }
