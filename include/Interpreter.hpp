@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <vector>
 #include <cassert>
+#include <limits>
 
 #include "AST.hpp"
 #include "Visitor.hpp"
@@ -88,7 +89,6 @@ public:
         int64_t left_res = last_value_;
         right->accept(*this);
         int64_t right_res = last_value_;
-        int64_t tmp = 0;
         switch (node.op()) {
             case bin_arith_op_type::add:
                 last_value_ = left_res + right_res;
@@ -240,10 +240,13 @@ public:
         }
         cond->accept(*this);
         if (last_value_) {
+            if(then_branch == nullptr) {
+                throw std::runtime_error("Missing then branch");
+            }
             then_branch->accept(*this);
         } else if (else_branch) {
             else_branch->accept(*this);
-        }
+        }     
     }
 
     void visit(WhileNode& node) override
@@ -254,7 +257,9 @@ public:
         if (!cond) {
             throw std::runtime_error("Missing condition");
         }
-
+        if (!body) {
+            throw std::runtime_error("Missing while body");
+        }
         cond->accept(*this);
         while (last_value_) {
             body->accept(*this);
@@ -268,23 +273,34 @@ public:
         if (!operand) {
             throw std::runtime_error("InputNode missing operand");
         }
-        int64_t value;
+        int64_t value = 0;
         if(operand->node_type() != ast::base_node_type::var) {
             throw std::runtime_error("InputNode lhs must be var");
         }
         VarNode* var = static_cast<VarNode*>(operand);
         
-        std::cin >> value;
+        if (!(std::cin >> value)) {
+            std::cin.clear();
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            throw std::runtime_error("Input error: expected integer");
+        }
+        
         table_.assign_or_create(var->name(), value);
     }
 
     void visit(ExprNode& node) override
     {
+        if(!(node.expr())) {
+            throw std::runtime_error("Expression is not valid");
+        }
         node.expr()->accept(*this);    
     }
 
     void visit(PrintNode& node) override
     {
+        if(!(node.expr())) {
+            throw std::runtime_error("Expression is not valid");
+        }
         node.expr()->accept(*this);
         std::cout << last_value_ << std::endl;
     }
