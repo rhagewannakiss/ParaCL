@@ -28,6 +28,3 @@ target_link_libraries(${PROJECT_NAME}
     PRIVATE
         flags
 )
-
-# enable_testing()
-# add_subdirectory(tests)
