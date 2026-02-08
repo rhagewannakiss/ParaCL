@@ -798,7 +798,7 @@ enum class bin_arith_op_type {
     sub,
     mul,
     div,
-    pow,
+    mod,
 };
 
 class BinArithOpNode : public BaseNode
@@ -917,6 +917,7 @@ enum class bin_logic_op_type {
     not_equal,
     logical_and,
     logical_or,
+    bitwise_xor,
 };
 
 class BinLogicOpNode : public BaseNode

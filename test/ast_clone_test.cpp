@@ -122,6 +122,18 @@ bool check_node_equality_val(const ast::BaseNode* node1,
                 }
                 return true;
             }
+        case ast::base_node_type::var_decl:
+            {
+                auto* va = dynamic_cast<const ast::VarDeclNode*>(node1);
+                auto* vb = dynamic_cast<const ast::VarDeclNode*>(node2);
+                if(!va || !vb) return false;
+                const auto& na = va->name();
+                const auto& nb = vb->name();
+                if (na != nb) return false;
+                const auto ia = va->init_expr();
+                const auto ib = vb->init_expr();
+                return check_node_equality_val(ia, ib);
+            }
         case ast::base_node_type::base:
         default:
             return false;

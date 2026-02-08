@@ -8,6 +8,7 @@
 #include <vector>
 #include <cassert>
 
+#include "AST.hpp"
 #include "Visitor.hpp"
 
 namespace ast {
@@ -104,16 +105,11 @@ public:
                 }
                 last_value_ = left_res / right_res;
                 break;
-            case bin_arith_op_type::pow://TODO: нужна ли степень или оставить "^" под XOR
-                tmp = 1;
-                if(right_res < 0) {
-                    throw std::runtime_error("Negative power");
+            case ast::bin_arith_op_type::mod:
+                if(right_res == 0) {
+                    throw std::runtime_error("Division by zero");
                 }
-                //TODO: check overflow
-                for (int64_t i = 0; i < right_res; i++) {
-                    tmp *= left_res;
-                }
-                last_value_ = tmp;
+                last_value_ = left_res % right_res;
                 break;
             default:
                 throw std::runtime_error("Unknown binary arithmetic operator");
@@ -171,6 +167,10 @@ public:
                 }
                 right->accept(*this);
                 last_value_ = left_res || last_value_;
+                break;
+            case bin_logic_op_type::bitwise_xor:
+                right->accept(*this);
+                last_value_ = left_res ^ last_value_;
                 break;
             default:
                 throw std::runtime_error("Unknown binary logical operator");
