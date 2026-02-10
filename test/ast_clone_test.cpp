@@ -186,14 +186,14 @@ TEST(ASTCloneTest, Test1)
     auto lit1 = std::make_unique<ast::ValueNode>(1);
     auto lit2 = std::make_unique<ast::ValueNode>(2);
 
-    auto var_a1 = std::make_unique<ast::VarNode>("a");
     auto add    = std::make_unique<ast::BinArithOpNode>(
         ast::bin_arith_op_type::add,
         std::move(lit1),
         std::move(lit2));
-    auto assign_init = std::make_unique<ast::AssignNode>(
-        std::move(var_a1), 
+    auto decl_a = std::make_unique<ast::VarDeclNode>(
+        "a",
         std::move(add));
+    auto decl_b = std::make_unique<ast::VarDeclNode>("b");
 
     auto var_a2 =  std::make_unique<ast::VarNode>("a");
     auto print_a = std::make_unique<ast::PrintNode>(
@@ -225,7 +225,8 @@ TEST(ASTCloneTest, Test1)
         std::move(while_body));
 
     std::vector<ast::BaseNode::NodePtr> stmts;
-    stmts.push_back(std::move(assign_init));
+    stmts.push_back(std::move(decl_a));
+    stmts.push_back(std::move(decl_b));
     stmts.push_back(std::move(print_a));
     stmts.push_back(std::move(while_node));
 
