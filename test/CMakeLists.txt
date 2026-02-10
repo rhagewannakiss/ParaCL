@@ -38,6 +38,17 @@ target_link_libraries(ast_nodes_test
         GTest::gtest_main
 )
 
+add_executable(interpreter_runtime_validation_test
+    Visitor_tests/interpreter_runtime_validation_test.cpp
+)
+
+target_link_libraries(interpreter_runtime_validation_test
+    PRIVATE
+        paracl_core
+        GTest::gtest_main
+)
+
 include(GoogleTest)
 gtest_discover_tests(ast_clone_test)
 gtest_discover_tests(ast_nodes_test)
+gtest_discover_tests(interpreter_runtime_validation_test)
