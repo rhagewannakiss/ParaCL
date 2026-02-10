@@ -9,8 +9,8 @@
 #include <cassert>
 #include <limits>
 
-#include "AST.hpp"
-#include "Visitor.hpp"
+#include "AST/AST.hpp"
+#include "Visitors/Visitor.hpp"
 
 namespace ast {
 

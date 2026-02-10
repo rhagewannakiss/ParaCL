@@ -6,8 +6,8 @@
 #include <string>
 
 #include "gtest/gtest.h"
-#include "../include/AST.hpp"
-#include "../include/DotVisitor.hpp"
+#include "AST/AST.hpp"
+#include "Visitors/DotVisitor.hpp"
 
 namespace {
 bool check_node_equality_val(const ast::BaseNode* node1,

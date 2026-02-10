@@ -1,7 +1,7 @@
-#include <gtest/gtest.h>
 #include <memory>
 #include <stdexcept>
-#include "../include/AST.hpp"
+#include "gtest/gtest.h"
+#include "AST/AST.hpp"
 
 TEST(BaseSmokeTest, ValueNodeTest) {
     ast::ValueNode v(42);

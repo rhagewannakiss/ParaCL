@@ -4,3 +4,5 @@ build/
 *.out
 *.dot
 *.png
+compile_commands.json
+.cache

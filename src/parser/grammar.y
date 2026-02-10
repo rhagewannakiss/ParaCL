@@ -14,7 +14,7 @@
 #include <string>
 #include <vector>
 
-#include "AST.hpp"    // поменять когда будем переорганизовывать дерево проекта
+#include "AST/AST.hpp"    // поменять когда будем переорганизовывать дерево проекта
 
 namespace yy { class NumDriver; }
 using NodePtr = std::unique_ptr<ast::BaseNode>;
@@ -22,7 +22,7 @@ using NodePtr = std::unique_ptr<ast::BaseNode>;
 
 %code
 {
-#include "driver.hpp"
+#include "driver/driver.hpp"
 
 namespace yy {
 

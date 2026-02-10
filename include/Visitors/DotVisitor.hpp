@@ -6,7 +6,7 @@
 #include <unordered_map>
 #include <fstream>
 
-#include "Visitor.hpp"
+#include "Visitors/Visitor.hpp"
 
 namespace ast {
 //TODO: добавить константный Visitor и переписать DotVisitor на DotConstVisitor

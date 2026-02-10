@@ -10,7 +10,7 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(googletest)
 
 add_executable(ast_clone_test
-    ast_clone_test.cpp
+    AST_tests/ast_clone_test.cpp
 )
 
 target_link_libraries(ast_clone_test
@@ -20,7 +20,7 @@ target_link_libraries(ast_clone_test
 )
 
 add_executable(ast_print_test
-    ast_print_test.cpp
+    AST_tests/ast_print_test.cpp
 )
 
 target_link_libraries(ast_print_test
@@ -29,13 +29,15 @@ target_link_libraries(ast_print_test
 )
 
 add_executable(ast_nodes_test
-    ast_nodes_test.cpp
+    AST_tests/ast_nodes_test.cpp
 )
 
 target_link_libraries(ast_nodes_test
     PRIVATE
         paracl_core
+        GTest::gtest_main
 )
 
 include(GoogleTest)
 gtest_discover_tests(ast_clone_test)
+gtest_discover_tests(ast_nodes_test)
