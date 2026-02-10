@@ -44,7 +44,6 @@ NUMBER            [0-9]+
 "else"              { return yy::parser::token_type::ELSE; }
 "while"             { return yy::parser::token_type::WHILE; }
 "print"             { return yy::parser::token_type::PRINT; }
-"input"             { return yy::parser::token_type::INPUT; }
 {NUMBER}            { return yy::parser::token_type::NUMBER; }
 {VAR}               { return yy::parser::token_type::VAR; }
 .			        { return yy::parser::token_type::ERR; }

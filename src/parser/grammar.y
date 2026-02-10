@@ -10,10 +10,14 @@
 %code requires
 {
 #include <algorithm>
+#include <memory>
 #include <string>
 #include <vector>
 
+#include "AST.hpp"    // поменять когда будем переорганизовывать дерево проекта
+
 namespace yy { class NumDriver; }
+using NodePtr = std::unique_ptr<ast::BaseNode>;
 }
 
 %code
@@ -52,11 +56,12 @@ parser::token_type yylex(parser::semantic_type* yylval,
     LEFT_PAREN           "("
     RIGHT_CURLY_BRACKET  "}"
     LEFT_CURLY_BRACKET   "{"
-    IF                  "if"
-    ELSE                "else"
-    WHILE               "while"
-    PRINT               "print"
-    INPUT               "input"
+    RIGHT_SQUARE_BRACKET "["
+    RIGHT_SQUARE_BRACKET "]"
+    IF                   "if"
+    ELSE                 "else"
+    WHILE                "while"
+    PRINT                "print"
     NEWLINE
     ERR
 ;
@@ -64,10 +69,12 @@ parser::token_type yylex(parser::semantic_type* yylval,
 %token <int> NUMBER
 %token <std::string> VAR
 
-%nterm <int> expr
-%nterm <int> stmt
-%nterm <int> stmts
-%nterm <int> program
+%nterm <std::unique_ptr<ast::BaseNode>> expr
+%nterm <std::unique_ptr<ast::BaseNode>> stmt
+%nterm <std::unique_ptr<ast::BaseNode>> lvalue
+%nterm <std::unique_ptr<ast::BaseNode>> program
+%nterm <std::vector<std::unique_ptr<ast::BaseNode>>> stmts
+%nterm <std::vector<std::unique_ptr<ast::BaseNode>>> expr_list
 
 %right ASSIGNMENT
 %left OR
@@ -81,160 +88,182 @@ parser::token_type yylex(parser::semantic_type* yylval,
 %nonassoc XIF
 %nonassoc ELSE
 
+
 %start program
 
 %%
 
 program: stmts
     {
+        auto scope = std::make_unique<ast::ScopeNode>();
+        for (size_t i = 0; i < $1.size(); ++i) {
+            scope->add_statement(std::move($1[i]));
+        }
+        driver->set_ast_root(std::move(scope));
     }
 ;
 
 stmts: stmt stmts
     {
-        $$ = $2;
+        $$ = std::move($2);
+        $$.push_back(std::move($1));
     }
     | %empty
     {
-        $$ = 0;
+        $$ = {};
     }
 ;
 
 stmt: expr SEMICOLON
     {
-        $$ = $1;
+        $$ = std::make_unique<ast::ExprNode>(std::move($1));
     }
     | SEMICOLON
     {
+        $$ = nullptr;
+    }
+    | VAR SEMICOLON
+    {
+        $$ = std::make_unique<ast::VarDeclNode>($1, std::make_unique<ast::ValueNode>(0));
     }
     | IF LEFT_PAREN expr RIGHT_PAREN stmt %prec XIF
     {
-        if ($3) {
-            = $5;
-        } else {
-            = 0;
-        }
+        $$ = std::make_unique<ast::IfNode>(std::move($3), std::move($5));
+    }
+    | IF LEFT_PAREN error RIGHT_PAREN stmt %prec XIF
+    {
+        error(@3, "Missing condition in if");
+        $$ = std::make_unique<ast::IfNode>(std::make_unique<ast::ValueNode>(0), std::move($5));
     }
     | IF LEFT_PAREN expr RIGHT_PAREN stmt ELSE stmt
     {
-        if ($3) {
-            = $5;
-        } else {
-            = $7;
-        }
+        $$ = std::make_unique<ast::IfNode>(std::move($3), std::move($5), std::move($7));
     }
+    | IF LEFT_PAREN error RIGHT_PAREN stmt ELSE stmt
+        error(@3, "Missing condition in if-else");
+        $$ = std::make_unique<ast::IfNode>(std::make_unique<ast::ValueNode>(0), std::move($5), std::move($7));
     | WHILE LEFT_PAREN expr RIGHT_PAREN stmt
     {
-        int result = 0;
-        while ($3) {
-            result = $5;
-        }
-        $$ = result;
+        $$ = make_unique<ast::WhileNode>(std::move($3), std::move($5));
     }
+    | WHILE LEFT_PAREN error RIGHT_PAREN stmt
+        error(@3, "Missing condition in while");
+        $$ = std::make_unique<ast::WhileNode>(std::make_unique<ast::ValueNode>(0), std::move($5));
     | LEFT_CURLY_BRACKET stmts RIGHT_CURLY_BRACKET
     {
-        $$ = $2;
+        $$ = std::make_unique<ast::ScopeNode>();
+        for (size_t i = 0; i < $2.size(); ++i) {
+            static_cast<ast::ScopeNode*>($$.get())->add_statement(std::move($2[i]));
+        }
     }
     | PRINT expr SEMICOLON
     {
-        std::cout << $2 << std::endl;
+        $$ = std::make_unique<ast::PrintNode>(std::move($2));
     }
     | NEWLINE
     {
         driver->newline();
+        $$ = nullptr;
     }
 ;
 
 expr: expr PLUS expr
     {
-        $$ = $1 + $3;
+        $$ = std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::add, std::move($1), std::move($3));
     }
     | expr MINUS expr
     {
-        $$ = $1 - $3;
+        $$ = std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::sub, std::move($1), std::move($3));
     }
     | expr MUL expr
     {
-        $$ = $1 * $3;
+        $$ = std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::mul, std::move($1), std::move($3));
     }
     | expr DIV expr
     {
-        $$ = $1 / $3;
+        $$ = std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::div, std::move($1), std::move($3));
     }
     | expr MODULUS expr
     {
-        $$ = $1 % $3;
+        $$ = std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::mod, std::move($1), std::move($3));
     }
     | expr EQUAL expr
     {
-        $$ = ($1 == $3);
+        $$ = std::make_unique<ast::BinLogicOpNode>(ast::bin_logic_op_type::equal, std::move($1), std::move($3));
     }
     | expr NOT_EQUAL expr
     {
-        $$ = ($1 != $3);
+        $$ = std::make_unique<ast::BinLogicOpNode>(ast::bin_logic_op_type::not_equal, std::move($1), std::move($3));
     }
     | expr LESS expr
     {
-        $$ = ($1 < $3);
+        $$ = std::make_unique<ast::BinLogicOpNode>(ast::bin_logic_op_type::less, std::move($1), std::move($3));
     }
     | expr GREATER expr
     {
-        $$ = ($1 > $3);
+        $$ = std::make_unique<ast::BinLogicOpNode>(ast::bin_logic_op_type::greater, std::move($1), std::move($3));
     }
     | expr LESS_OR_EQUAL expr
     {
-        $$ = ($1 <= $3);
+         $$ = std::make_unique<ast::BinLogicOpNode>(ast::bin_logic_op_type::less_equal, std::move($1), std::move($3));
     }
     | expr GREATER_OR_EQUAL expr
     {
-        $$ = ($1 >= $3);
+         $$ = std::make_unique<ast::BinLogicOpNode>(ast::bin_logic_op_type::greater_equal, std::move($1), std::move($3));
     }
     | expr AND expr
     {
-        $$ = ($1 && $3);
+         $$ = std::make_unique<ast::BinLogicOpNode>(ast::bin_logic_op_type::logical_and, std::move($1), std::move($3));
     }
     | expr OR expr
     {
-        $$ = ($1 || $3);
+         $$ = std::make_unique<ast::BinLogicOpNode>(ast::bin_logic_op_type::logical_or, std::move($1), std::move($3));
     }
     | expr XOR expr
     {
-        $$ = ($1 ^ $3);
+        $$ = std::make_unique<ast::BinLogicOpNode>(ast::bin_logic_op_type::logical_xor, std::move($1), std::move($3));
     }
     | NOT expr
     {
-        $$ = !$2;
+        $$ = std::make_unique<ast::UnOpNode>(ast::unop_node_type::logical_not, std::move($2));
     }
     | MINUS expr %prec UMINUS
     {
-        $$ = -$2;
+        $$ = std::make_unique<ast::UnOpNode>(ast::unop_node_type::neg, std::move($2));
     }
     | PLUS expr %prec UMINUS
     {
-        $$ = $2;
+        $$ = std::make_unique<ast::UnOpNode>(ast::unop_node_type::pos, std::move($2));
     }
     | LEFT_PAREN expr RIGHT_PAREN
     {
-        $$ = $2;
+        $$ = std::move($2);
     }
     | NUMBER
     {
-        $$ = $1;
+        $$ = std::make_unique<ast::ValueNode>($1);
     }
     | VAR
     {
-        $$ = driver->get_var($1);
+        $$ = std::make_unique<ast::VarNode>(std::move($1));
     }
-    | VAR ASSIGNMENT expr
+    | lvalue ASSIGNMENT expr
     {
-        driver->set_var($1, $3);
-        $$ = $3;
+        if ($1->node_type() == ast::base_node_type::var) {
+            auto var = static_cast<ast::VarNode*>($1.get());
+            $$ = std::make_unique<ast::ValDeclNode>(var->name(), std::move($3));
+        } else {
+            $$ = std::make_unique<ast::AssignNode>(std::move($1), std::move($3));
+        }
     }
-    | INPUT
+    | QUESTION_MARK
     {
-        int val;
-        std::cin >> val;
-        $$ = val;
+        $$ = std::make_unique<ast::InputNode>();
+    }
+    | lvalue ASSIGNMENT QUESTION_MARK
+    {
+        auto input = std::make_unique<ast::InputNode>(std::move($1));
+        $$ = std::move(input);
     }
 ;
 

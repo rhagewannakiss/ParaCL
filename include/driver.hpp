@@ -9,14 +9,15 @@
 #include <string>
 #include <vector>
 
+#include "AST.hpp"
+
 namespace yy {
 
 class NumDriver {
 private:
     FlexLexer* plex_;
     location loc_;
-    std::map<std::string, int> variables_;
-    std::vector<std::pair<std::vector<int>, std::vector<int>>> equations_;
+    ast::AST ast_;
 
 public:
     explicit NumDriver(FlexLexer* plex) : plex_(plex) {}
@@ -59,23 +60,12 @@ public:
         return loc_;
     }
 
-    void insert(std::vector<std::pair<std::vector<int>, std::vector<int>>> v) {
-        equations_.assign(v.rbegin(), v.rend());
+    void set_ast_root(std::unique_ptr<ast::BaseNode> root) {
+        ast_.set_root(std::move(root));
     }
 
-    void printout() const {
-        for (const auto& eq : equations_) {
-            int sum_left = 0;
-            for (int val : eq.first) {
-                sum_left += val;
-            }
-            int sum_right = 0;
-            for (int val : eq.second) {
-                sum_right += val;
-            }
-            std::cout << "Checking: " << sum_left << " vs " << sum_right
-                      << "; Result: " << (sum_left == sum_right) << std::endl;
-        }
+    const ast::AST& get_ast() const {
+        return ast_;
     }
 };
 
