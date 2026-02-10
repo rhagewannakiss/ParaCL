@@ -6,8 +6,8 @@
 #include <string>
 
 #include "gtest/gtest.h"
-#include "../include/AST.hpp"
-#include "../include/DotVisitor.hpp"
+#include "AST/AST.hpp"
+#include "Visitors/DotVisitor.hpp"
 
 namespace {
 bool check_node_equality_val(const ast::BaseNode* node1,
@@ -122,6 +122,18 @@ bool check_node_equality_val(const ast::BaseNode* node1,
                 }
                 return true;
             }
+        case ast::base_node_type::var_decl:
+            {
+                auto* va = dynamic_cast<const ast::VarDeclNode*>(node1);
+                auto* vb = dynamic_cast<const ast::VarDeclNode*>(node2);
+                if(!va || !vb) return false;
+                const auto& na = va->name();
+                const auto& nb = vb->name();
+                if (na != nb) return false;
+                const auto ia = va->init_expr();
+                const auto ib = vb->init_expr();
+                return check_node_equality_val(ia, ib);
+            }
         case ast::base_node_type::base:
         default:
             return false;
@@ -174,14 +186,14 @@ TEST(ASTCloneTest, Test1)
     auto lit1 = std::make_unique<ast::ValueNode>(1);
     auto lit2 = std::make_unique<ast::ValueNode>(2);
 
-    auto var_a1 = std::make_unique<ast::VarNode>("a");
     auto add    = std::make_unique<ast::BinArithOpNode>(
         ast::bin_arith_op_type::add,
         std::move(lit1),
         std::move(lit2));
-    auto assign_init = std::make_unique<ast::AssignNode>(
-        std::move(var_a1), 
+    auto decl_a = std::make_unique<ast::VarDeclNode>(
+        "a",
         std::move(add));
+    auto decl_b = std::make_unique<ast::VarDeclNode>("b");
 
     auto var_a2 =  std::make_unique<ast::VarNode>("a");
     auto print_a = std::make_unique<ast::PrintNode>(
@@ -213,7 +225,8 @@ TEST(ASTCloneTest, Test1)
         std::move(while_body));
 
     std::vector<ast::BaseNode::NodePtr> stmts;
-    stmts.push_back(std::move(assign_init));
+    stmts.push_back(std::move(decl_a));
+    stmts.push_back(std::move(decl_b));
     stmts.push_back(std::move(print_a));
     stmts.push_back(std::move(while_node));
 

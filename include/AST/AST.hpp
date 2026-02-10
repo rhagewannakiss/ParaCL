@@ -6,10 +6,8 @@
 #include <string>
 #include <vector>
 #include <cstdio>
-
-#ifdef NDEBUG
 #include <stdexcept>
-#endif
+
 namespace ast {
 
 struct Visitor;
@@ -111,12 +109,18 @@ public:
 
     void add_child(NodePtr child)
     {
+        if(!child) {
+            throw std::runtime_error("Trying to add null child");    
+        }
         set_child_parent(child.get());
         children_.push_back(std::move(child));
     }
 
     void add_child_front(NodePtr child)
     {
+        if(!child) {
+            throw std::runtime_error("Trying to add null child front");
+        }
         set_child_parent(child.get());
         children_.push_front(std::move(child));
     }
@@ -798,7 +802,7 @@ enum class bin_arith_op_type {
     sub,
     mul,
     div,
-    pow,
+    mod,
 };
 
 class BinArithOpNode : public BaseNode
@@ -917,6 +921,7 @@ enum class bin_logic_op_type {
     not_equal,
     logical_and,
     logical_or,
+    bitwise_xor,
 };
 
 class BinLogicOpNode : public BaseNode
@@ -1094,9 +1099,9 @@ public:
         if(this == &other) return *this;
         BaseNode::operator=(other);
         const auto& child = other.init_expr();
+        is_init_set = false;
         if(child != nullptr)
         {
-            is_init_set = false;
             set_init_expr(child->clone());
         }
         name_ = other.name_;

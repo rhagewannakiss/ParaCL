@@ -6,7 +6,7 @@
 #include <unordered_map>
 #include <fstream>
 
-#include "Visitor.hpp"
+#include "Visitors/Visitor.hpp"
 
 namespace ast {
 //TODO: добавить константный Visitor и переписать DotVisitor на DotConstVisitor
@@ -206,7 +206,7 @@ private:
             case bin_arith_op_type::sub: return "-";
             case bin_arith_op_type::mul: return "*";
             case bin_arith_op_type::div: return "/";
-            case bin_arith_op_type::pow: return "^";
+            case bin_arith_op_type::mod: return "%";
         }
         return "?";
     }
@@ -222,6 +222,7 @@ private:
             case bin_logic_op_type::not_equal:     return "!=";
             case bin_logic_op_type::logical_and:   return "&&";
             case bin_logic_op_type::logical_or:    return "||";
+            case bin_logic_op_type::bitwise_xor:   return "^";
         }
         return "?";
     }
