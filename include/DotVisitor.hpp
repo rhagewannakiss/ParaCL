@@ -4,28 +4,135 @@
 #include <sstream>
 #include <string>
 #include <unordered_map>
+#include <fstream>
 
 #include "Visitor.hpp"
 
 namespace ast {
+//TODO: добавить константный Visitor и переписать DotVisitor на DotConstVisitor
 
 class DotVisitor : public Visitor
 {
 public:
     explicit DotVisitor(std::ostream& out) : out_(out) {}
 
-    void visit(BinArithOpNode& node) override { emit_node(node, op_label(node.op())); emit_edges(node); }
-    void visit(BinLogicOpNode& node) override { emit_node(node, op_label(node.op())); emit_edges(node); }
-    void visit(ValueNode& node)      override { emit_node(node, std::to_string(node.value())); }
-    void visit(UnOpNode& node)       override { emit_node(node, unop_label(node.op())); emit_edges(node); }
-    void visit(AssignNode& node)     override { emit_node(node, "="); emit_edges(node); }
-    void visit(VarNode& node)        override { emit_node(node, node.name()); }
-    void visit(IfNode& node)         override { emit_node(node, "if"); emit_edges(node); }
-    void visit(WhileNode& node)      override { emit_node(node, "while"); emit_edges(node); }
-    void visit(InputNode& node)      override { emit_node(node, "input ?"); emit_edges(node); }
-    void visit(ExprNode& node)       override { emit_node(node, "expr"); emit_edges(node); }
-    void visit(PrintNode& node)      override { emit_node(node, "print"); emit_edges(node); }
-    void visit(ScopeNode& node)      override { emit_node(node, "scope"); emit_edges(node); }
+    void visit(BinArithOpNode& node) override
+    {
+        emit_node(node, op_label(node.op()));
+        emit_edges(node);
+        for (const auto& child : node.children()) {
+            child->accept(*this);
+        }
+    }
+
+    void visit(BinLogicOpNode& node) override
+    {
+        emit_node(node, op_label(node.op()));
+        emit_edges(node);
+        for (const auto& child : node.children()) {
+            child->accept(*this);
+        }
+    }
+
+    void visit(ValueNode& node) override
+    {
+        emit_node(node, std::to_string(node.value()));
+    }
+
+    void visit(UnOpNode& node) override
+    {
+        emit_node(node, unop_label(node.op()));
+        emit_edges(node);
+        for (const auto& child : node.children()) {
+            child->accept(*this);
+        }
+    }
+
+    void visit(AssignNode& node) override
+    {
+        emit_node(node, "=");
+        emit_edges(node);
+        for (const auto& child : node.children()) {
+            child->accept(*this);
+        }
+    }
+
+    void visit(VarNode& node) override
+    {
+        emit_node(node, node.name());
+    }
+
+    void visit(IfNode& node) override
+    {
+        emit_node(node, "if");
+        emit_edges(node);
+        for (const auto& child : node.children()) {
+            child->accept(*this);
+        }
+    }
+
+    void visit(WhileNode& node) override
+    {
+        emit_node(node, "while");
+        emit_edges(node);
+        for (const auto& child : node.children()) {
+            child->accept(*this);
+        }
+    }
+
+    void visit(InputNode& node) override
+    {
+        emit_node(node, "input ?");
+        emit_edges(node);
+        for (const auto& child : node.children()) {
+            child->accept(*this);
+        }
+    }
+
+    void visit(ExprNode& node) override
+    {
+        emit_node(node, "expr");
+        emit_edges(node);
+        for (const auto& child : node.children()) {
+            child->accept(*this);
+        }
+    }
+
+    void visit(PrintNode& node) override
+    {
+        emit_node(node, "print");
+        emit_edges(node);
+        for (const auto& child : node.children()) {
+            child->accept(*this);
+        }
+    }
+
+    void visit(ScopeNode& node) override
+    {
+        emit_node(node, "scope");
+        emit_edges(node);
+        for (const auto& child : node.children()) {
+            child->accept(*this);
+        }
+    }
+
+    void visit(VarDeclNode& node) override
+    {
+        emit_node(node, "var_decl " + node.name());
+        emit_edges(node);
+        const auto& init_expr = node.init_expr();
+        if(init_expr != nullptr)
+            init_expr->accept(*this);
+    }
+
+    void create_dot(ast::AST& ast) 
+    {
+        begin_graph();
+        if(ast.root()) {
+            ast.root()->accept(*this);
+        }
+        end_graph();
+    }
 
     void begin_graph() { out_ << "digraph AST {\n"; }
     void end_graph()   { out_ << "}\n"; }
@@ -68,17 +175,18 @@ private:
         switch (type) {
             case base_node_type::bin_arith_op: return "bin_arith_op";
             case base_node_type::bin_logic_op: return "bin_logic_op";
-            case base_node_type::unop: return "unop";
-            case base_node_type::scope: return "scope";
-            case base_node_type::value: return "value";
-            case base_node_type::print: return "print";
-            case base_node_type::assign: return "assign";
-            case base_node_type::var: return "var";
-            case base_node_type::expr: return "expr";
-            case base_node_type::if_node: return "if";
-            case base_node_type::while_node: return "while";
-            case base_node_type::input: return "input";
-            case base_node_type::base: return "base";
+            case base_node_type::unop:         return "unop";
+            case base_node_type::scope:        return "scope";
+            case base_node_type::value:        return "value";
+            case base_node_type::print:        return "print";
+            case base_node_type::assign:       return "assign";
+            case base_node_type::var:          return "var";
+            case base_node_type::expr:         return "expr";
+            case base_node_type::if_node:      return "if";
+            case base_node_type::while_node:   return "while";
+            case base_node_type::input:        return "input";
+            case base_node_type::base:         return "base";
+            case base_node_type::var_decl:     return "var_decl";
         }
         return "unknown";
     }
