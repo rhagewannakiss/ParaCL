@@ -28,5 +28,14 @@ target_link_libraries(ast_print_test
         paracl_core
 )
 
+add_executable(ast_nodes_test
+    ast_nodes_test.cpp
+)
+
+target_link_libraries(ast_nodes_test
+    PRIVATE
+        paracl_core
+)
+
 include(GoogleTest)
 gtest_discover_tests(ast_clone_test)
