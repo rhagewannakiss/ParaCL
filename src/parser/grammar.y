@@ -14,7 +14,7 @@
 #include <string>
 #include <vector>
 
-#include "AST.hpp"    // поменять когда будем переорганизовывать дерево проекта
+#include "AST.hpp"
 
 namespace yy { class NumDriver; }
 using NodePtr = std::unique_ptr<ast::BaseNode>;
@@ -118,6 +118,11 @@ stmt: expr SEMICOLON
     {
         $$ = std::make_unique<ast::ExprNode>(std::move($1));
     }
+    | expr error
+    {
+        error(@2, "No semicolon");
+        $$ = std::make_unique<ast::ExprNode>(std::make_unique<ast::ValueNode>(0));
+    }
     | SEMICOLON
     {
         $$ = nullptr;
@@ -125,6 +130,11 @@ stmt: expr SEMICOLON
     | VAR SEMICOLON
     {
         $$ = std::make_unique<ast::VarDeclNode>($1, std::make_unique<ast::ValueNode>(0));
+    }
+    | VAR error
+    {
+        error(@2, "No semicolon");
+        $$ = std::make_unique<ast::ValDeclNode>($1, std::make_unique<ast::ValueNode>(0));
     }
     | IF LEFT_PAREN expr RIGHT_PAREN stmt %prec XIF
     {
@@ -160,6 +170,11 @@ stmt: expr SEMICOLON
     {
         $$ = std::make_unique<ast::PrintNode>(std::move($2));
     }
+    | PRINT expr error
+    {
+        error(@3, "Missing semicolon in print");
+        $$ = std::make_unique<ast::PrintNode>(std::make_unique<ValueNode>(0));
+    }
     | NEWLINE
     {
         driver->newline();
@@ -171,9 +186,25 @@ expr: expr PLUS expr
     {
         $$ = std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::add, std::move($1), std::move($3));
     }
+    | expr PLUS PLUS SEMICOLON
+    {
+        $$ = $1++;
+    }
+    | PLUS PLUS expr SEMICOLON
+    {
+        $$ = ++$3;
+    }
     | expr MINUS expr
     {
         $$ = std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::sub, std::move($1), std::move($3));
+    }
+    | expr MINUS MINUS SEMICOLON
+    {
+        $$ = $1--;
+    }
+    | MINUS MINUS expr SEMICOLON
+    {
+        $$ = --$3;
     }
     | expr MUL expr
     {
@@ -181,11 +212,21 @@ expr: expr PLUS expr
     }
     | expr DIV expr
     {
+        if ($3 == 0) {
+            error(@3, "Division by zero");
+            $$ = std::make_unique<ast::BinArithOpNode>(std::bin_arith_op_type::div, std::move($1), std::make_unique<ast::ValueNode>(0));
+        } else {
         $$ = std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::div, std::move($1), std::move($3));
+        }
     }
     | expr MODULUS expr
     {
-        $$ = std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::mod, std::move($1), std::move($3));
+        if ($3 == 0) {
+            error(@3, "Division by zero");
+            $$ = std::make_unique<ast::BinArithOpNode>(std::bin_arith_op_type::div, std::move($1), std::make_unique<ast::ValueNode>(0));
+        } else {
+            $$ = std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::mod, std::move($1), std::move($3));
+        }
     }
     | expr EQUAL expr
     {
