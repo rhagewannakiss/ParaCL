@@ -261,6 +261,10 @@ public:
         if (!body) {
             throw std::runtime_error("Missing while body");
         }
+        validate_evaluable_node(*cond, "Invalid condition");
+        if(body->node_type() != base_node_type::scope) {
+            throw std::runtime_error("Invalid while body"); 
+        }
         cond->accept(*this);
         while (last_value_) {
             body->accept(*this);
