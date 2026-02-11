@@ -7,6 +7,7 @@
 #include <vector>
 #include <cstdio>
 #include <stdexcept>
+#include <cstdint>
 
 namespace ast {
 
