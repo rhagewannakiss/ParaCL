@@ -88,6 +88,16 @@ target_link_libraries(interpreter_control_flow_test
         GTest::gtest_main
 )
 
+add_executable(interpreter_stmt_test
+    Visitor_tests/interpreter_stmt_test.cpp
+)
+
+target_link_libraries(interpreter_stmt_test
+    PRIVATE
+        paracl_core
+        GTest::gtest_main
+)
+
 include(GoogleTest)
 gtest_discover_tests(ast_clone_test)
 gtest_discover_tests(ast_nodes_test)
@@ -96,3 +106,4 @@ gtest_discover_tests(interpreter_expr_test)
 gtest_discover_tests(interpreter_expr_errors_test)
 gtest_discover_tests(interpreter_short_circuit_test)
 gtest_discover_tests(interpreter_control_flow_test)
+gtest_discover_tests(interpreter_stmt_test)
