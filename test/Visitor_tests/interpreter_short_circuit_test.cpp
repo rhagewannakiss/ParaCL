@@ -8,9 +8,12 @@ std::string RunAndCapture(ast::BaseNode& node) {
     ast::Interpreter interpreter;
     std::ostringstream out;
     std::streambuf* old = std::cout.rdbuf(out.rdbuf());
-
-    node.accept(interpreter);
-
+    try {
+        node.accept(interpreter);
+    } catch (...) {
+        std::cout.rdbuf(old);
+        throw;
+    }
     std::cout.rdbuf(old);
     return out.str();
 }
