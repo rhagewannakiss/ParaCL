@@ -7,6 +7,7 @@
 #include <vector>
 #include <cstdio>
 #include <stdexcept>
+#include <cstdint>
 
 namespace ast {
 
@@ -134,10 +135,10 @@ public:
 
 class ValueNode : public BaseNode
 {
-    int value_;
+    int64_t value_;
 
 public:
-    explicit ValueNode(int value) : 
+    explicit ValueNode(int64_t value) : 
         BaseNode(base_node_type::value), 
         value_(value) {}
     
@@ -154,7 +155,7 @@ public:
     ValueNode(ValueNode&& other) noexcept = default;
     ValueNode& operator=(ValueNode&& other) noexcept = default;
 
-    int value() const { return value_; }
+    int64_t value() const { return value_; }
     void accept(Visitor& v) override;
 
     NodePtr clone() const override {
