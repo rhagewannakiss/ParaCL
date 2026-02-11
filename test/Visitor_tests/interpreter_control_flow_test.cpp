@@ -82,20 +82,24 @@ TEST(InterpreterControlFlowTest, IfNodeMissingThenWhenTrueThrows) {
 
 TEST(InterpreterControlFlowTest, WhileNodeZeroIterationsTest) {
     ast::ScopeNode root;
+    auto while_body = std::make_unique<ast::ScopeNode>();
+    while_body->add_statement(std::make_unique<ast::AssignNode>(
+        std::make_unique<ast::VarNode>("x"),
+        std::make_unique<ast::BinArithOpNode>(
+            ast::bin_arith_op_type::add,
+            std::make_unique<ast::VarNode>("x"),
+            std::make_unique<ast::ValueNode>(1))));
+
     root.add_statement(std::make_unique<ast::VarDeclNode>(
         "x",
         std::make_unique<ast::ValueNode>(0)));
-    root.add_statement(std::make_unique<ast::WhileNode>(
-        std::make_unique<ast::BinLogicOpNode>(
+    auto while_node = std::make_unique<ast::WhileNode>(nullptr, nullptr);
+    while_node->set_condition(std::make_unique<ast::BinLogicOpNode>(
             ast::bin_logic_op_type::less,
             std::make_unique<ast::VarNode>("x"),
-            std::make_unique<ast::ValueNode>(0)),
-        std::make_unique<ast::AssignNode>(
-            std::make_unique<ast::VarNode>("x"),
-            std::make_unique<ast::BinArithOpNode>(
-                ast::bin_arith_op_type::add,
-                std::make_unique<ast::VarNode>("x"),
-                std::make_unique<ast::ValueNode>(1)))));
+            std::make_unique<ast::ValueNode>(0)));
+    while_node->set_body(std::move(while_body));
+    root.add_statement(std::move(while_node));
     root.add_statement(std::make_unique<ast::PrintNode>(
         std::make_unique<ast::VarNode>("x")));
 
@@ -104,20 +108,24 @@ TEST(InterpreterControlFlowTest, WhileNodeZeroIterationsTest) {
 
 TEST(InterpreterControlFlowTest, WhileNodeMultipleIterationsTest) {
     ast::ScopeNode root;
+    auto while_body = std::make_unique<ast::ScopeNode>();
+    while_body->add_statement(std::make_unique<ast::AssignNode>(
+        std::make_unique<ast::VarNode>("x"),
+        std::make_unique<ast::BinArithOpNode>(
+            ast::bin_arith_op_type::add,
+            std::make_unique<ast::VarNode>("x"),
+            std::make_unique<ast::ValueNode>(1))));
+
     root.add_statement(std::make_unique<ast::VarDeclNode>(
         "x",
         std::make_unique<ast::ValueNode>(0)));
-    root.add_statement(std::make_unique<ast::WhileNode>(
-        std::make_unique<ast::BinLogicOpNode>(
+    auto while_node = std::make_unique<ast::WhileNode>(nullptr, nullptr);
+    while_node->set_condition(std::make_unique<ast::BinLogicOpNode>(
             ast::bin_logic_op_type::less,
             std::make_unique<ast::VarNode>("x"),
-            std::make_unique<ast::ValueNode>(3)),
-        std::make_unique<ast::AssignNode>(
-            std::make_unique<ast::VarNode>("x"),
-            std::make_unique<ast::BinArithOpNode>(
-                ast::bin_arith_op_type::add,
-                std::make_unique<ast::VarNode>("x"),
-                std::make_unique<ast::ValueNode>(1)))));
+            std::make_unique<ast::ValueNode>(3)));
+    while_node->set_body(std::move(while_body));
+    root.add_statement(std::move(while_node));
     root.add_statement(std::make_unique<ast::PrintNode>(
         std::make_unique<ast::VarNode>("x")));
 
