@@ -48,7 +48,51 @@ target_link_libraries(interpreter_runtime_validation_test
         GTest::gtest_main
 )
 
+add_executable(interpreter_expr_test
+    Visitor_tests/interpreter_expr_test.cpp
+)
+
+target_link_libraries(interpreter_expr_test
+    PRIVATE
+        paracl_core
+        GTest::gtest_main
+)
+
+add_executable(interpreter_expr_errors_test
+    Visitor_tests/interpreter_expr_errors_test.cpp
+)
+
+target_link_libraries(interpreter_expr_errors_test
+    PRIVATE
+        paracl_core
+        GTest::gtest_main
+)
+
+add_executable(interpreter_short_circuit_test
+    Visitor_tests/interpreter_short_circuit_test.cpp
+)
+
+target_link_libraries(interpreter_short_circuit_test
+    PRIVATE
+        paracl_core
+        GTest::gtest_main
+)
+
+add_executable(interpreter_control_flow_test
+    Visitor_tests/interpreter_control_flow_test.cpp
+)
+
+target_link_libraries(interpreter_control_flow_test
+    PRIVATE
+        paracl_core
+        GTest::gtest_main
+)
+
 include(GoogleTest)
 gtest_discover_tests(ast_clone_test)
 gtest_discover_tests(ast_nodes_test)
 gtest_discover_tests(interpreter_runtime_validation_test)
+gtest_discover_tests(interpreter_expr_test)
+gtest_discover_tests(interpreter_expr_errors_test)
+gtest_discover_tests(interpreter_short_circuit_test)
+gtest_discover_tests(interpreter_control_flow_test)
