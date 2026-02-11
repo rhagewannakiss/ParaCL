@@ -98,6 +98,16 @@ target_link_libraries(interpreter_stmt_test
         GTest::gtest_main
 )
 
+add_executable(dot_visitor_test
+    Visitor_tests/dot_visitor_test.cpp
+)
+
+target_link_libraries(dot_visitor_test
+    PRIVATE
+        paracl_core
+        GTest::gtest_main
+)
+
 include(GoogleTest)
 gtest_discover_tests(ast_clone_test)
 gtest_discover_tests(ast_nodes_test)
@@ -107,3 +117,4 @@ gtest_discover_tests(interpreter_expr_errors_test)
 gtest_discover_tests(interpreter_short_circuit_test)
 gtest_discover_tests(interpreter_control_flow_test)
 gtest_discover_tests(interpreter_stmt_test)
+gtest_discover_tests(dot_visitor_test)
