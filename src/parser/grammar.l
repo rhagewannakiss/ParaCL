@@ -30,6 +30,7 @@ NUMBER            [0-9]+
 "<="                { return yy::parser::token_type::LESS_OR_EQUAL; }
 ">="                { return yy::parser::token_type::GREATER_OR_EQUAL; }
 "?"                 { return yy::parser::token_type::QUESTION_MARK; }
+","                 { return yy::parser::token_type::COMMA }
 "!"                 { return yy::parser::token_type::NOT; }
 "=="                { return yy::parser::token_type::EQUAL; }
 "!="                { return yy::parser::token_type::NOT_EQUAL; }
@@ -41,6 +42,7 @@ NUMBER            [0-9]+
 "}"                 { return yy::parser::token_type::RIGHT_CURLY_BRACKET; }
 "{"                 { return yy::parser::token_type::LEFT_CURLY_BRACKET; }
 "if"                { return yy::parser::token_type::IF; }
+"for"               { return yy::parser::token_type::FOR}
 "else"              { return yy::parser::token_type::ELSE; }
 "while"             { return yy::parser::token_type::WHILE; }
 "print"             { return yy::parser::token_type::PRINT; }

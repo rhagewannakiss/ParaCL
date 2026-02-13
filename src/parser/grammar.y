@@ -46,6 +46,7 @@ parser::token_type yylex(parser::semantic_type* yylval,
     LESS_OR_EQUAL        "<="
     GREATER_OR_EQUAL     ">="
     QUESTION_MARK        "?"
+    COMMA                ","
     NOT                  "!"
     EQUAL                "=="
     NOT_EQUAL            "!="
@@ -56,9 +57,8 @@ parser::token_type yylex(parser::semantic_type* yylval,
     LEFT_PAREN           "("
     RIGHT_CURLY_BRACKET  "}"
     LEFT_CURLY_BRACKET   "{"
-    RIGHT_SQUARE_BRACKET "["
-    RIGHT_SQUARE_BRACKET "]"
     IF                   "if"
+    FOR                  "for"
     ELSE                 "else"
     WHILE                "while"
     PRINT                "print"
@@ -150,15 +150,23 @@ stmt: expr SEMICOLON
         $$ = std::make_unique<ast::IfNode>(std::move($3), std::move($5), std::move($7));
     }
     | IF LEFT_PAREN error RIGHT_PAREN stmt ELSE stmt
+    {
         error(@3, "Missing condition in if-else");
         $$ = std::make_unique<ast::IfNode>(std::make_unique<ast::ValueNode>(0), std::move($5), std::move($7));
+    }
+    //| FOR LEFT_PAREN expr SEMICOLON expr SEMICOLON expr RIGHT_PAREN  //TODO - FOR
+    //{
+    //    $$ = make_unique<ast::
+    //}
     | WHILE LEFT_PAREN expr RIGHT_PAREN stmt
     {
         $$ = make_unique<ast::WhileNode>(std::move($3), std::move($5));
     }
     | WHILE LEFT_PAREN error RIGHT_PAREN stmt
+    {
         error(@3, "Missing condition in while");
         $$ = std::make_unique<ast::WhileNode>(std::make_unique<ast::ValueNode>(0), std::move($5));
+    }
     | LEFT_CURLY_BRACKET stmts RIGHT_CURLY_BRACKET
     {
         $$ = std::make_unique<ast::ScopeNode>();
@@ -186,7 +194,17 @@ expr: expr PLUS expr
     {
         $$ = std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::add, std::move($1), std::move($3));
     }
-    | expr PLUS PLUS SEMICOLON
+    | error PLUS expr
+    {
+        error(@1, "Missing left operand");
+        $$ = std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::add, std::make_unique<ast::ValDeclNode>(0), std::move($3));
+    }
+    | expr PLUS error
+    {
+        error(@3, "Missing right operand");
+        $$ = std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::add, std::move($1),  std::make_unique<ast::ValDeclNode>(0));
+    }
+    | expr PLUS PLUS SEMICOLON  //TODO - a++, a--, ++a, --a
     {
         $$ = $1++;
     }
@@ -197,6 +215,16 @@ expr: expr PLUS expr
     | expr MINUS expr
     {
         $$ = std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::sub, std::move($1), std::move($3));
+    }
+    | error MINUS expr
+    {
+        error(@1, "Missing left operand");
+        $$ = std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::sub, std::make_unique<ast::ValDeclNode>(0), std::move($3));
+    }
+    | expr MINUS error
+    {
+        error(@3, "Missing right operand");
+        $$ = std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::sub, std::move($1),  std::make_unique<ast::ValDeclNode>(0));
     }
     | expr MINUS MINUS SEMICOLON
     {
