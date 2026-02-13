@@ -8,6 +8,7 @@
 #include <cstdio>
 #include <stdexcept>
 #include <cstdint>
+#include "AST/SourceRange.hpp"
 
 namespace ast {
 
@@ -55,6 +56,7 @@ private:
     base_node_type node_type_ = base_node_type::base;
     BaseNode* parent_ = nullptr;
     std::deque<NodePtr> children_{};
+    SourceRange loc_;
 
 protected:
     void set_child_parent(BaseNode* child)
@@ -65,12 +67,14 @@ protected:
     }
 
     BaseNode(const BaseNode& other) : 
-        node_type_(other.node_type_) {}
+        node_type_(other.node_type_),
+        loc_(other.loc_) {}
     
     BaseNode& operator=(const BaseNode& other)
     {
         if (this == &other) return *this;
         node_type_ = other.node_type_;
+        loc_ = other.loc_;
         parent_ = nullptr;
         children_.clear();
         return *this;
@@ -81,6 +85,7 @@ protected:
         parent_(nullptr), 
         children_(std::move(other.children_))
     {
+        loc_ = other.loc_;
         for (auto& child : children_) {
             set_child_parent(child.get());
         }
@@ -90,6 +95,7 @@ protected:
     {
         if (this == &other) return *this;
         node_type_ = other.node_type_;
+        loc_ = other.loc_;
         parent_ = nullptr;
         children_ = std::move(other.children_);
         for (auto& child : children_) {
@@ -100,8 +106,9 @@ protected:
 
 
 public:
-    explicit BaseNode(base_node_type node_type) : 
-                node_type_(node_type) {}
+    explicit BaseNode(base_node_type node_type, SourceRange loc = SourceRange()) : 
+                node_type_(node_type),
+                loc_(loc) {}
     virtual ~BaseNode() = default;
 
     base_node_type node_type() const            { return node_type_; }
@@ -128,6 +135,9 @@ public:
 
     const std::deque<NodePtr>& children() const { return children_; }
     std::deque<NodePtr>& children() { return children_; }
+    
+    void set_location(SourceRange loc) { loc_ = loc; }
+    const SourceRange& location() const { return loc_; }
 
     virtual void accept(Visitor& v) = 0;
     virtual NodePtr clone() const = 0;
