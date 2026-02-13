@@ -15,6 +15,7 @@
 #include <vector>
 
 #include "AST/AST.hpp"
+#include "Visitors/Visitor.hpp"
 
 namespace yy { class NumDriver; }
 using NodePtr = std::unique_ptr<ast::BaseNode>;
@@ -46,7 +47,6 @@ parser::token_type yylex(parser::semantic_type* yylval,
     LESS_OR_EQUAL        "<="
     GREATER_OR_EQUAL     ">="
     QUESTION_MARK        "?"
-    COMMA                ","
     NOT                  "!"
     EQUAL                "=="
     NOT_EQUAL            "!="
@@ -74,7 +74,6 @@ parser::token_type yylex(parser::semantic_type* yylval,
 %nterm <std::unique_ptr<ast::BaseNode>> lvalue
 %nterm <std::unique_ptr<ast::BaseNode>> program
 %nterm <std::vector<std::unique_ptr<ast::BaseNode>>> stmts
-%nterm <std::vector<std::unique_ptr<ast::BaseNode>>> expr_list
 
 %right ASSIGNMENT
 %left OR
@@ -110,7 +109,7 @@ stmts: stmt stmts
     }
     | %empty
     {
-        $$ = {};
+        $$ = std::vector<std::unique_ptr<ast::BaseNode>>();
     }
 ;
 
@@ -134,7 +133,7 @@ stmt: expr SEMICOLON
     | VAR error
     {
         error(@2, "No semicolon");
-        $$ = std::make_unique<ast::ValDeclNode>($1, std::make_unique<ast::ValueNode>(0));
+        $$ = std::make_unique<ast::VarDeclNode>($1, std::make_unique<ast::ValueNode>(0));
     }
     | IF LEFT_PAREN expr RIGHT_PAREN stmt %prec XIF
     {
@@ -154,13 +153,9 @@ stmt: expr SEMICOLON
         error(@3, "Missing condition in if-else");
         $$ = std::make_unique<ast::IfNode>(std::make_unique<ast::ValueNode>(0), std::move($5), std::move($7));
     }
-    //| FOR LEFT_PAREN expr SEMICOLON expr SEMICOLON expr RIGHT_PAREN  //TODO - FOR
-    //{
-    //    $$ = make_unique<ast::
-    //}
     | WHILE LEFT_PAREN expr RIGHT_PAREN stmt
     {
-        $$ = make_unique<ast::WhileNode>(std::move($3), std::move($5));
+        $$ = std::make_unique<ast::WhileNode>(std::move($3), std::move($5));
     }
     | WHILE LEFT_PAREN error RIGHT_PAREN stmt
     {
@@ -181,7 +176,7 @@ stmt: expr SEMICOLON
     | PRINT expr error
     {
         error(@3, "Missing semicolon in print");
-        $$ = std::make_unique<ast::PrintNode>(std::make_unique<ValueNode>(0));
+        $$ = std::make_unique<ast::PrintNode>(std::make_unique<ast::ValueNode>(0));
     }
     | NEWLINE
     {
@@ -190,6 +185,11 @@ stmt: expr SEMICOLON
     }
 ;
 
+lvalue: VAR
+    {
+        $$ = std::make_unique<ast::VarNode>($1);
+    }
+
 expr: expr PLUS expr
     {
         $$ = std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::add, std::move($1), std::move($3));
@@ -197,20 +197,12 @@ expr: expr PLUS expr
     | error PLUS expr
     {
         error(@1, "Missing left operand");
-        $$ = std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::add, std::make_unique<ast::ValDeclNode>(0), std::move($3));
+        $$ = std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::add, std::make_unique<ast::ValueNode>(0), std::move($3));
     }
     | expr PLUS error
     {
         error(@3, "Missing right operand");
-        $$ = std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::add, std::move($1),  std::make_unique<ast::ValDeclNode>(0));
-    }
-    | expr PLUS PLUS SEMICOLON  //TODO - a++, a--, ++a, --a
-    {
-        $$ = $1++;
-    }
-    | PLUS PLUS expr SEMICOLON
-    {
-        $$ = ++$3;
+        $$ = std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::add, std::move($1),  std::make_unique<ast::ValueNode>(0));
     }
     | expr MINUS expr
     {
@@ -219,20 +211,12 @@ expr: expr PLUS expr
     | error MINUS expr
     {
         error(@1, "Missing left operand");
-        $$ = std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::sub, std::make_unique<ast::ValDeclNode>(0), std::move($3));
+        $$ = std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::sub, std::make_unique<ast::ValueNode>(0), std::move($3));
     }
     | expr MINUS error
     {
         error(@3, "Missing right operand");
-        $$ = std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::sub, std::move($1),  std::make_unique<ast::ValDeclNode>(0));
-    }
-    | expr MINUS MINUS SEMICOLON
-    {
-        $$ = $1--;
-    }
-    | MINUS MINUS expr SEMICOLON
-    {
-        $$ = --$3;
+        $$ = std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::sub, std::move($1),  std::make_unique<ast::ValueNode>(0));
     }
     | expr MUL expr
     {
@@ -242,7 +226,7 @@ expr: expr PLUS expr
     {
         if ($3 == 0) {
             error(@3, "Division by zero");
-            $$ = std::make_unique<ast::BinArithOpNode>(std::bin_arith_op_type::div, std::move($1), std::make_unique<ast::ValueNode>(0));
+            $$ = std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::div, std::move($1), std::make_unique<ast::ValueNode>(0));
         } else {
         $$ = std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::div, std::move($1), std::move($3));
         }
@@ -251,7 +235,7 @@ expr: expr PLUS expr
     {
         if ($3 == 0) {
             error(@3, "Division by zero");
-            $$ = std::make_unique<ast::BinArithOpNode>(std::bin_arith_op_type::div, std::move($1), std::make_unique<ast::ValueNode>(0));
+            $$ = std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::div, std::move($1), std::make_unique<ast::ValueNode>(0));
         } else {
             $$ = std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::mod, std::move($1), std::move($3));
         }
@@ -290,7 +274,7 @@ expr: expr PLUS expr
     }
     | expr XOR expr
     {
-        $$ = std::make_unique<ast::BinLogicOpNode>(ast::bin_logic_op_type::logical_xor, std::move($1), std::move($3));
+        $$ = std::make_unique<ast::BinLogicOpNode>(ast::bin_logic_op_type::bitwise_xor, std::move($1), std::move($3));
     }
     | NOT expr
     {
@@ -320,7 +304,7 @@ expr: expr PLUS expr
     {
         if ($1->node_type() == ast::base_node_type::var) {
             auto var = static_cast<ast::VarNode*>($1.get());
-            $$ = std::make_unique<ast::ValDeclNode>(var->name(), std::move($3));
+            $$ = std::make_unique<ast::VarDeclNode>(var->name(), std::move($3));
         } else {
             $$ = std::make_unique<ast::AssignNode>(std::move($1), std::move($3));
         }

@@ -1,7 +1,9 @@
 %option C++
-%option noyywrap
+%option noyywrap yylineno
 
 %{
+
+#include "grammar.tab.hh"
 
 #include <iostream>
 
@@ -30,19 +32,18 @@ NUMBER            [0-9]+
 "<="                { return yy::parser::token_type::LESS_OR_EQUAL; }
 ">="                { return yy::parser::token_type::GREATER_OR_EQUAL; }
 "?"                 { return yy::parser::token_type::QUESTION_MARK; }
-","                 { return yy::parser::token_type::COMMA }
 "!"                 { return yy::parser::token_type::NOT; }
 "=="                { return yy::parser::token_type::EQUAL; }
 "!="                { return yy::parser::token_type::NOT_EQUAL; }
 "&&"                { return yy::parser::token_type::AND; }
 "||"                { return yy::parser::token_type::OR; }
 "^"                 { return yy::parser::token_type::XOR; }
-")"                 { return yy::parser::token_type::RIGHT_ROUND_BRACKET; }
-"("                 { return yy::parser::token_type::LEFT_ROUND_BRACKET; }
+")"                 { return yy::parser::token_type::RIGHT_PAREN; }
+"("                 { return yy::parser::token_type::LEFT_PAREN; }
 "}"                 { return yy::parser::token_type::RIGHT_CURLY_BRACKET; }
 "{"                 { return yy::parser::token_type::LEFT_CURLY_BRACKET; }
 "if"                { return yy::parser::token_type::IF; }
-"for"               { return yy::parser::token_type::FOR}
+"for"               { return yy::parser::token_type::FOR; }
 "else"              { return yy::parser::token_type::ELSE; }
 "while"             { return yy::parser::token_type::WHILE; }
 "print"             { return yy::parser::token_type::PRINT; }

@@ -232,12 +232,13 @@ public:
     void visit(IfNode& node) override
     {
         auto* cond = node.condition();
-        auto* then_branch = node.then_branch();
-        auto* else_branch = node.else_branch();
-
         if (!cond) {
             throw std::runtime_error("Missing condition");
         }
+        validate_evaluable_node(*cond, "Invalid condition");
+        auto* then_branch = node.then_branch();
+        auto* else_branch = node.else_branch();
+
         cond->accept(*this);
         if (last_value_) {
             if(then_branch == nullptr) {
@@ -259,6 +260,10 @@ public:
         }
         if (!body) {
             throw std::runtime_error("Missing while body");
+        }
+        validate_evaluable_node(*cond, "Invalid condition");
+        if(body->node_type() != base_node_type::scope) {
+            throw std::runtime_error("Invalid while body"); 
         }
         cond->accept(*this);
         while (last_value_) {
@@ -298,10 +303,15 @@ public:
 
     void visit(PrintNode& node) override
     {
-        if(!(node.expr())) {
-            throw std::runtime_error("Expression is not valid");
+        auto* expr = node.expr();
+        if(!expr) {
+            throw std::runtime_error(
+                    "Missing expression for printing"
+                    );
         }
-        node.expr()->accept(*this);
+
+        validate_evaluable_node(*expr, "Invalid print expression");
+        expr->accept(*this);
         std::cout << last_value_ << std::endl;
     }
 
@@ -337,6 +347,30 @@ public:
     }
 
 private:
+    void validate_evaluable_node(
+            const BaseNode& node, 
+            const char* error_msg) const
+    {
+        switch (node.node_type()) {
+            case base_node_type::scope:
+            case base_node_type::assign:
+            case base_node_type::while_node:
+            case base_node_type::input:
+            case base_node_type::var_decl:
+            case base_node_type::print:
+            case base_node_type::if_node:
+                throw std::runtime_error(error_msg);
+            case base_node_type::base:
+                throw std::runtime_error("you cannot use abstract class");
+            case base_node_type::bin_arith_op:
+            case base_node_type::unop:
+            case base_node_type::bin_logic_op:
+            case base_node_type::value:
+            case base_node_type::var:
+            case base_node_type::expr:
+                return;
+        }
+    }
 
 };
 } //namespace ast

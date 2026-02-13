@@ -112,10 +112,17 @@ add_executable(lexer_test
     Parser_tests/lexer_test.cpp
 )
 
+target_link_libraries(lexer_test
+    PRIVATE
+        GTest::gtest_main
+        parser_lib
+        paracl_core
+)
+
 target_include_directories(lexer_test
     PRIVATE
-        ${CMAKE_CURRENT_BINARY_DIR}
-        paracl_core
+        ${PROJECT_BINARY_DIR}/src/parser
+        ${CMAKE_SOURCE_DIR}/include
 )
 
 add_executable(parser_test
@@ -125,14 +132,15 @@ add_executable(parser_test
 target_link_libraries(parser_test
     PRIVATE
         GTest::gtest_main
+        parser_lib
         paracl_core
 )
 
-target_include_directories(parser_test PRIVATE
-    ${CMAKE_CURRENT_BINARY_DIR}
-    include
+target_include_directories(parser_test
+    PRIVATE
+        ${PROJECT_BINARY_DIR}/src/parser
+        ${CMAKE_SOURCE_DIR}/include
 )
-
 
 include(GoogleTest)
 gtest_discover_tests(ast_clone_test)
