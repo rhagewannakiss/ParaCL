@@ -108,6 +108,42 @@ target_link_libraries(dot_visitor_test
         GTest::gtest_main
 )
 
+add_executable(lexer_test
+    Parser_tests/lexer_test.cpp
+)
+
+target_link_libraries(lexer_test
+    PRIVATE
+        GTest::gtest_main
+        parser_lib
+        paracl_core
+)
+
+target_include_directories(lexer_test
+    PRIVATE
+        ${PROJECT_BINARY_DIR}/src/parser
+        ${CMAKE_SOURCE_DIR}/include
+       ${FLEX_INCLUDE_DIRS}
+)
+
+add_executable(parser_test
+    Parser_tests/parser_test.cpp
+)
+
+target_link_libraries(parser_test
+    PRIVATE
+        GTest::gtest_main
+        parser_lib
+        paracl_core
+)
+
+target_include_directories(parser_test
+    PRIVATE
+        ${PROJECT_BINARY_DIR}/src/parser
+        ${CMAKE_SOURCE_DIR}/include
+       ${FLEX_INCLUDE_DIRS}
+)
+
 include(GoogleTest)
 gtest_discover_tests(ast_clone_test)
 gtest_discover_tests(ast_nodes_test)
@@ -118,3 +154,5 @@ gtest_discover_tests(interpreter_short_circuit_test)
 gtest_discover_tests(interpreter_control_flow_test)
 gtest_discover_tests(interpreter_stmt_test)
 gtest_discover_tests(dot_visitor_test)
+gtest_discover_tests(lexer_test)
+gtest_discover_tests(parser_test)

@@ -15,6 +15,7 @@
 #include <vector>
 
 #include "AST/AST.hpp"
+#include "Visitors/Visitor.hpp"
 
 namespace yy { class NumDriver; }
 using NodePtr = std::unique_ptr<ast::BaseNode>;
@@ -56,9 +57,8 @@ parser::token_type yylex(parser::semantic_type* yylval,
     LEFT_PAREN           "("
     RIGHT_CURLY_BRACKET  "}"
     LEFT_CURLY_BRACKET   "{"
-    RIGHT_SQUARE_BRACKET "["
-    RIGHT_SQUARE_BRACKET "]"
     IF                   "if"
+    FOR                  "for"
     ELSE                 "else"
     WHILE                "while"
     PRINT                "print"
@@ -74,7 +74,6 @@ parser::token_type yylex(parser::semantic_type* yylval,
 %nterm <std::unique_ptr<ast::BaseNode>> lvalue
 %nterm <std::unique_ptr<ast::BaseNode>> program
 %nterm <std::vector<std::unique_ptr<ast::BaseNode>>> stmts
-%nterm <std::vector<std::unique_ptr<ast::BaseNode>>> expr_list
 
 %right ASSIGNMENT
 %left OR
@@ -110,7 +109,7 @@ stmts: stmt stmts
     }
     | %empty
     {
-        $$ = {};
+        $$ = std::vector<std::unique_ptr<ast::BaseNode>>();
     }
 ;
 
@@ -134,7 +133,7 @@ stmt: expr SEMICOLON
     | VAR error
     {
         error(@2, "No semicolon");
-        $$ = std::make_unique<ast::ValDeclNode>($1, std::make_unique<ast::ValueNode>(0));
+        $$ = std::make_unique<ast::VarDeclNode>($1, std::make_unique<ast::ValueNode>(0));
     }
     | IF LEFT_PAREN expr RIGHT_PAREN stmt %prec XIF
     {
@@ -150,15 +149,19 @@ stmt: expr SEMICOLON
         $$ = std::make_unique<ast::IfNode>(std::move($3), std::move($5), std::move($7));
     }
     | IF LEFT_PAREN error RIGHT_PAREN stmt ELSE stmt
+    {
         error(@3, "Missing condition in if-else");
         $$ = std::make_unique<ast::IfNode>(std::make_unique<ast::ValueNode>(0), std::move($5), std::move($7));
+    }
     | WHILE LEFT_PAREN expr RIGHT_PAREN stmt
     {
-        $$ = make_unique<ast::WhileNode>(std::move($3), std::move($5));
+        $$ = std::make_unique<ast::WhileNode>(std::move($3), std::move($5));
     }
     | WHILE LEFT_PAREN error RIGHT_PAREN stmt
+    {
         error(@3, "Missing condition in while");
         $$ = std::make_unique<ast::WhileNode>(std::make_unique<ast::ValueNode>(0), std::move($5));
+    }
     | LEFT_CURLY_BRACKET stmts RIGHT_CURLY_BRACKET
     {
         $$ = std::make_unique<ast::ScopeNode>();
@@ -173,7 +176,7 @@ stmt: expr SEMICOLON
     | PRINT expr error
     {
         error(@3, "Missing semicolon in print");
-        $$ = std::make_unique<ast::PrintNode>(std::make_unique<ValueNode>(0));
+        $$ = std::make_unique<ast::PrintNode>(std::make_unique<ast::ValueNode>(0));
     }
     | NEWLINE
     {
@@ -182,29 +185,38 @@ stmt: expr SEMICOLON
     }
 ;
 
+lvalue: VAR
+    {
+        $$ = std::make_unique<ast::VarNode>($1);
+    }
+
 expr: expr PLUS expr
     {
         $$ = std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::add, std::move($1), std::move($3));
     }
-    | expr PLUS PLUS SEMICOLON
+    | error PLUS expr
     {
-        $$ = $1++;
+        error(@1, "Missing left operand");
+        $$ = std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::add, std::make_unique<ast::ValueNode>(0), std::move($3));
     }
-    | PLUS PLUS expr SEMICOLON
+    | expr PLUS error
     {
-        $$ = ++$3;
+        error(@3, "Missing right operand");
+        $$ = std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::add, std::move($1),  std::make_unique<ast::ValueNode>(0));
     }
     | expr MINUS expr
     {
         $$ = std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::sub, std::move($1), std::move($3));
     }
-    | expr MINUS MINUS SEMICOLON
+    | error MINUS expr
     {
-        $$ = $1--;
+        error(@1, "Missing left operand");
+        $$ = std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::sub, std::make_unique<ast::ValueNode>(0), std::move($3));
     }
-    | MINUS MINUS expr SEMICOLON
+    | expr MINUS error
     {
-        $$ = --$3;
+        error(@3, "Missing right operand");
+        $$ = std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::sub, std::move($1),  std::make_unique<ast::ValueNode>(0));
     }
     | expr MUL expr
     {
@@ -214,7 +226,7 @@ expr: expr PLUS expr
     {
         if ($3 == 0) {
             error(@3, "Division by zero");
-            $$ = std::make_unique<ast::BinArithOpNode>(std::bin_arith_op_type::div, std::move($1), std::make_unique<ast::ValueNode>(0));
+            $$ = std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::div, std::move($1), std::make_unique<ast::ValueNode>(0));
         } else {
         $$ = std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::div, std::move($1), std::move($3));
         }
@@ -223,7 +235,7 @@ expr: expr PLUS expr
     {
         if ($3 == 0) {
             error(@3, "Division by zero");
-            $$ = std::make_unique<ast::BinArithOpNode>(std::bin_arith_op_type::div, std::move($1), std::make_unique<ast::ValueNode>(0));
+            $$ = std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::div, std::move($1), std::make_unique<ast::ValueNode>(0));
         } else {
             $$ = std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::mod, std::move($1), std::move($3));
         }
@@ -262,7 +274,7 @@ expr: expr PLUS expr
     }
     | expr XOR expr
     {
-        $$ = std::make_unique<ast::BinLogicOpNode>(ast::bin_logic_op_type::logical_xor, std::move($1), std::move($3));
+        $$ = std::make_unique<ast::BinLogicOpNode>(ast::bin_logic_op_type::bitwise_xor, std::move($1), std::move($3));
     }
     | NOT expr
     {
@@ -292,7 +304,7 @@ expr: expr PLUS expr
     {
         if ($1->node_type() == ast::base_node_type::var) {
             auto var = static_cast<ast::VarNode*>($1.get());
-            $$ = std::make_unique<ast::ValDeclNode>(var->name(), std::move($3));
+            $$ = std::make_unique<ast::VarDeclNode>(var->name(), std::move($3));
         } else {
             $$ = std::make_unique<ast::AssignNode>(std::move($1), std::move($3));
         }
@@ -320,8 +332,7 @@ parser::token_type yylex(parser::semantic_type* yylval,
 }
 
 void parser::error(const location_type& loc, const std::string& msg) {
-    std::cerr << "Error at " << loc.begin.line << ":" << loc.begin.column
-              << ": " << msg << std::endl;
+     driver->add_error(loc, msg);
 }
 
 } // namespace yy
