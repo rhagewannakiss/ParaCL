@@ -123,7 +123,7 @@ target_include_directories(lexer_test
     PRIVATE
         ${PROJECT_BINARY_DIR}/src/parser
         ${CMAKE_SOURCE_DIR}/include
-        ${FLEX_INCLUDE_DIR}
+       ${FLEX_INCLUDE_DIRS}
 )
 
 add_executable(parser_test
@@ -141,7 +141,7 @@ target_include_directories(parser_test
     PRIVATE
         ${PROJECT_BINARY_DIR}/src/parser
         ${CMAKE_SOURCE_DIR}/include
-        ${FLEX_INCLUDE_DIR}
+       ${FLEX_INCLUDE_DIRS}
 )
 
 include(GoogleTest)
