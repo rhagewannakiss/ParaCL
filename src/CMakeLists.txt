@@ -33,6 +33,7 @@ add_library(parser_lib
 target_include_directories(parser_lib
     PUBLIC
         ${CMAKE_CURRENT_BINARY_DIR}
+        ${FLEX_INCLUDE_DIR}
 )
 
 target_link_libraries(parser_lib
