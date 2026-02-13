@@ -1,7 +1,5 @@
 #include "grammar.tab.hh"
 
-#include <filesystem>
-#include <fstream>
 #include <memory>
 #include <sstream>
 #include <gtest/gtest.h>
@@ -121,7 +119,8 @@ TEST(LexerTest, CommentsAndWhitespace) {
     std::stringstream input("// comment\n x\t=  42;");
     yyFlexLexer lexer(&input);
 
-    EXPECT_EQ(lexer.yylex(), yy::parser::token_type::VAR);  // x (skips comment and ws)
+    EXPECT_EQ(lexer.yylex(), yy::parser::token_type::NEWLINE);
+    EXPECT_EQ(lexer.yylex(), yy::parser::token_type::VAR);
     EXPECT_EQ(lexer.yylex(), yy::parser::token_type::ASSIGNMENT);
     EXPECT_EQ(lexer.yylex(), yy::parser::token_type::NUMBER);
     EXPECT_EQ(lexer.yylex(), yy::parser::token_type::SEMICOLON);
@@ -160,6 +159,7 @@ TEST(LexerTest, EdgeCases) {
 
     EXPECT_EQ(lexer.yylex(), yy::parser::token_type::VAR);
     EXPECT_EQ(lexer.yylex(), yy::parser::token_type::NUMBER);
+    EXPECT_EQ(lexer.yylex(), yy::parser::token_type::NEWLINE);
     EXPECT_EQ(lexer.yylex(), yy::parser::token_type::QUESTION_MARK);
     EXPECT_EQ(lexer.yylex(), 0);
 }

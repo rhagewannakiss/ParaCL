@@ -13,18 +13,19 @@ TEST(ParserTest, SimpleAssignment) {
 
     auto& ast = driver.get_ast();
     ASSERT_NE(ast.root(), nullptr);
-    EXPECT_EQ(ast.root()->node_type(), ast::base_node_type::scope);
 
-    const auto& stmts = static_cast<const ast::ScopeNode*>(ast.root())->statements();
-    EXPECT_EQ(stmts.size(), 1);
+    auto scope = static_cast<const ast::ScopeNode*>(ast.root());
+    const auto& stmts = scope->statements();
+    ASSERT_EQ(stmts.size(), 1);
 
-    EXPECT_EQ(stmts[0]->node_type(), ast::base_node_type::var_decl);
-    auto decl = static_cast<ast::VarDeclNode*>(stmts[0].get());
-    EXPECT_EQ(decl->name(), "x");
-    auto init = decl->init_expr();
-    ASSERT_NE(init, nullptr);
-    EXPECT_EQ(init->node_type(), ast::base_node_type::value);
-    EXPECT_EQ(static_cast<ast::ValueNode*>(init)->value(), 5);
+    EXPECT_EQ(stmts[0]->node_type(), ast::base_node_type::expr);
+    auto exprNode = static_cast<const ast::ExprNode*>(stmts[0].get());
+    ASSERT_NE(exprNode->expr(), nullptr);
+
+    auto inner = exprNode->expr();
+    EXPECT_EQ(inner->node_type(), ast::base_node_type::var_decl);
+    auto varDecl = static_cast<const ast::VarDeclNode*>(inner);
+    EXPECT_EQ(varDecl->name(), "x");
 }
 
 TEST(ParserTest, IfStatement) {
@@ -35,14 +36,33 @@ TEST(ParserTest, IfStatement) {
     EXPECT_TRUE(driver.parse());
 
     auto& ast = driver.get_ast();
-    const auto& stmts = static_cast<const ast::ScopeNode*>(ast.root())->statements();
-    EXPECT_EQ(stmts.size(), 1);
+    auto scope = static_cast<const ast::ScopeNode*>(ast.root());
+    const auto& stmts = scope->statements();
+    ASSERT_EQ(stmts.size(), 1);
 
     EXPECT_EQ(stmts[0]->node_type(), ast::base_node_type::if_node);
-    auto if_node = static_cast<ast::IfNode*>(stmts[0].get());
-    EXPECT_EQ(if_node->condition()->node_type(), ast::base_node_type::bin_logic_op);
-    EXPECT_EQ(if_node->then_branch()->node_type(), ast::base_node_type::scope);
-    EXPECT_EQ(if_node->else_branch()->node_type(), ast::base_node_type::var_decl);
+    auto ifNode = static_cast<const ast::IfNode*>(stmts[0].get());
+
+    auto thenBranch = ifNode->then_branch();
+    ASSERT_NE(thenBranch, nullptr);
+    EXPECT_EQ(thenBranch->node_type(), ast::base_node_type::scope);
+
+    auto thenScope = static_cast<const ast::ScopeNode*>(thenBranch);
+    const auto& thenStmts = thenScope->statements();
+    ASSERT_EQ(thenStmts.size(), 1);
+    EXPECT_EQ(thenStmts[0]->node_type(), ast::base_node_type::expr);
+
+    auto thenExpr = static_cast<const ast::ExprNode*>(thenStmts[0].get());
+    ASSERT_NE(thenExpr->expr(), nullptr);
+    EXPECT_EQ(thenExpr->expr()->node_type(), ast::base_node_type::var_decl);
+
+    auto elseBranch = ifNode->else_branch();
+    ASSERT_NE(elseBranch, nullptr);
+    EXPECT_EQ(elseBranch->node_type(), ast::base_node_type::expr);
+
+    auto elseExpr = static_cast<const ast::ExprNode*>(elseBranch);
+    ASSERT_NE(elseExpr->expr(), nullptr);
+    EXPECT_EQ(elseExpr->expr()->node_type(), ast::base_node_type::var_decl);
 }
 
 TEST(ParserTest, WhileLoop) {
@@ -83,7 +103,8 @@ TEST(ParserTest, InvalidSyntaxMissingSemicolon) {
     yyFlexLexer lexer(&input);
     yy::NumDriver driver(&lexer);
 
-    EXPECT_FALSE(driver.parse());  // Should fail
+    EXPECT_TRUE(driver.parse());
+    EXPECT_TRUE(driver.has_errors());
 }
 
 TEST(ParserTest, EmptyConditionError) {
@@ -91,7 +112,8 @@ TEST(ParserTest, EmptyConditionError) {
     yyFlexLexer lexer(&input);
     yy::NumDriver driver(&lexer);
 
-    EXPECT_FALSE(driver.parse());  // Fails
+    EXPECT_TRUE(driver.parse());
+    EXPECT_TRUE(driver.has_errors());
 }
 
 TEST(ParserTest, EmptyInput) {

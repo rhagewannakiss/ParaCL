@@ -18,6 +18,7 @@ private:
     FlexLexer* plex_;
     location loc_;
     ast::AST ast_;
+    int error_cnt_ = 0;
 
 public:
     explicit NumDriver(FlexLexer* plex) : plex_(plex) {}
@@ -43,6 +44,17 @@ public:
         }
 
         return tt;
+    }
+
+    void add_error(const location& loc, const std::string& msg) {
+        std::cerr << "Error at " << loc.begin.line << ":" << loc.begin.column
+                  << ": " << msg << std::endl;
+        error_cnt_++;
+    }
+
+    bool has_errors() const
+    {
+        return error_cnt_ > 0;
     }
 
     bool parse() {

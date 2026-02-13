@@ -11,7 +11,7 @@
 
 VAR               [a-zA-Z_][a-zA-Z_0-9]*
 NLINE             [\n]+
-WS                [\t\r\f\v]+
+WS                [ \t\r\f\v]+
 NUMBER            [0-9]+
 
 %%

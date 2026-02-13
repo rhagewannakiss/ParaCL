@@ -332,8 +332,7 @@ parser::token_type yylex(parser::semantic_type* yylval,
 }
 
 void parser::error(const location_type& loc, const std::string& msg) {
-    std::cerr << "Error at " << loc.begin.line << ":" << loc.begin.column
-              << ": " << msg << std::endl;
+     driver->add_error(loc, msg);
 }
 
 } // namespace yy
