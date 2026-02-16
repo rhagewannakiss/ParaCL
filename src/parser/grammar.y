@@ -186,6 +186,11 @@ stmt: expr SEMICOLON
         error(@3, "Missing semicolon in print");
         $$ = with_loc(std::make_unique<ast::PrintNode>(std::make_unique<ast::ValueNode>(0)), @$, driver);
     }
+    | lvalue ASSIGNMENT QUESTION_MARK SEMICOLON
+    {
+        auto input = std::make_unique<ast::InputNode>(std::move($1));
+        $$ = with_loc(std::move(input), @$, driver);
+    }
     | NEWLINE
     {
         driver->newline();
@@ -317,15 +322,6 @@ expr: expr PLUS expr
         } else {
             $$ = with_loc(std::make_unique<ast::AssignNode>(std::move($1), std::move($3)), @$, driver);
         }
-    }
-    | QUESTION_MARK
-    {
-        $$ = with_loc(std::make_unique<ast::InputNode>(), @$, driver);
-    }
-    | lvalue ASSIGNMENT QUESTION_MARK
-    {
-        auto input = std::make_unique<ast::InputNode>(std::move($1));
-        $$ = with_loc(std::move(input), @$, driver);
     }
 ;
 
