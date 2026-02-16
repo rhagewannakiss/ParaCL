@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "AST/AST.hpp"
+#include "driver/location_utils.hpp"
 
 namespace yy {
 
@@ -47,6 +48,10 @@ public:
     }
 
     void add_error(const location& loc, const std::string& msg) {
+        auto range = to_source_range(loc);
+        if (!range.file.empty()) {
+            std::cerr << range.file << ":";
+        }
         std::cerr << "Error at " << loc.begin.line << ":" << loc.begin.column
                   << ": " << msg << std::endl;
         error_cnt_++;
