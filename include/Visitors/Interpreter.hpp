@@ -4,15 +4,27 @@
 #include <cstdint>
 #include <iostream>
 #include <stdexcept>
+#include <string>
 #include <unordered_map>
 #include <vector>
 #include <cassert>
 #include <limits>
 
 #include "AST/AST.hpp"
+#include "AST/SourceRange.hpp"
 #include "Visitors/Visitor.hpp"
 
 namespace ast {
+
+inline std::string make_runtime_error(const SourceRange& loc,
+                                      const std::string& message)
+{
+    const std::string location = loc.make_string();
+    if (location.empty()) {
+        return "error: " + message;
+    }
+    return location + ": error: " + message;
+}
 
 class VarTable {
     using scope = std::unordered_map<std::string, int64_t>;
@@ -26,27 +38,32 @@ public:
         scopes_.emplace_back();
     }
 
-    void leave_scope() {
+    void leave_scope(SourceRange loc = {}) {
         if (scopes_.size() <= 1) {
             throw std::runtime_error(
-                "Trying to leave from global scope"); 
+                make_runtime_error(loc, "Trying to leave from global scope")); 
         }
         scopes_.pop_back();
     }
 
-    void declare_in_cur_scope(const std::string& name, int64_t value=0) {
+    void declare_in_cur_scope(const std::string& name, 
+                            int64_t value = 0,
+                            SourceRange loc = {})
+    {
         auto& cur = scopes_.back();
         const auto& iter = cur.find(name);
         if (iter != cur.end()) {
-            throw std::runtime_error("Variable " + 
-                                     name + 
-                                     " already declared");
+            throw std::runtime_error(
+                    make_runtime_error(
+                        loc,
+                        "Variable " + name + " already declared"));
         } else {
             cur[name] = value;
         }
     }
 
-    int64_t lookup(const std::string& name) {
+    int64_t lookup(const std::string& name,
+                    SourceRange loc = {}) {
         for(size_t i = scopes_.size(); i-- > 0 ;)
         {
             auto& cur = scopes_[i];
@@ -55,7 +72,8 @@ public:
                 return iter->second;  
             }
         }
-        throw std::runtime_error("Undefined variable: " + name);
+        throw std::runtime_error(
+                make_runtime_error(loc, "Undefined variable: " + name));
     }
 
     void assign_or_create(const std::string& name, int64_t value) {
@@ -82,8 +100,11 @@ public:
     {
         auto* left = node.left();
         auto* right = node.right();
-        if (!left || !right) {//TODO: пока я нигде не ловлю это исключение и хз, что с ним делать
-            throw std::runtime_error("BinArithOpNode missing operand");
+        if (!left || !right) {
+            throw std::runtime_error(
+                    make_runtime_error(
+                        node.location(),
+                        "BinArithOpNode missing operand"));
         }
         left->accept(*this);
         int64_t left_res = last_value_;
@@ -101,18 +122,27 @@ public:
                 break;
             case bin_arith_op_type::div:
                 if(right_res == 0) {
-                    throw std::runtime_error("Division by zero");
+                    throw std::runtime_error(
+                            make_runtime_error(
+                                node.location(),
+                                "Division by zero"));
                 }
                 last_value_ = left_res / right_res;
                 break;
             case ast::bin_arith_op_type::mod:
                 if(right_res == 0) {
-                    throw std::runtime_error("Division by zero");
+                    throw std::runtime_error(
+                            make_runtime_error(
+                                node.location(),
+                                "Division by zero"));
                 }
                 last_value_ = left_res % right_res;
                 break;
             default:
-                throw std::runtime_error("Unknown binary arithmetic operator");
+                throw std::runtime_error(
+                        make_runtime_error(
+                            node.location(),
+                            "Unknown binary arithmetic operator"));
                 break;
         }
     }
@@ -123,7 +153,10 @@ public:
         auto* right = node.right();
 
         if (!left || !right) {
-            throw std::runtime_error("BinLogicOpNode missing operand");
+            throw std::runtime_error(
+                    make_runtime_error(
+                        node.location(),
+                        "BinLogicOpNode missing operand"));
         }
         left->accept(*this);
         int64_t left_res = last_value_;
@@ -173,7 +206,10 @@ public:
                 last_value_ = left_res ^ last_value_;
                 break;
             default:
-                throw std::runtime_error("Unknown binary logical operator");
+                throw std::runtime_error(
+                        make_runtime_error(
+                            node.location(),
+                            "Unknown binary logical operator"));
                 break;
         }
     }
@@ -187,7 +223,10 @@ public:
     {
         auto* operand = node.operand();
         if (!operand) {
-            throw std::runtime_error("UnOpNode missing operand");
+            throw std::runtime_error(
+                    make_runtime_error(
+                        node.location(),
+                        "UnOpNode missing operand"));
         }
         operand->accept(*this);
         switch (node.op()) {
@@ -207,17 +246,26 @@ public:
         auto* lhs = node.lhs();
 
         if (lhs == nullptr) {
-            throw std::runtime_error("AssignNode's lhs is nullptr");
+            throw std::runtime_error(
+                    make_runtime_error(
+                        node.location(),
+                        "AssignNode's lhs is nullptr"));
         }
         bool is_var = lhs->node_type() == base_node_type::var;
         if(!is_var) {
-            throw std::runtime_error("AssignNode lhs must be var"); 
+            throw std::runtime_error(
+                    make_runtime_error(
+                        node.location(),
+                        "AssignNode lhs must be var")); 
         }
         VarNode* var = static_cast<VarNode*>(lhs);
         
         auto* operand = node.rhs();
         if (!operand) {
-            throw std::runtime_error("AssignNode missing operand");
+            throw std::runtime_error(
+                    make_runtime_error(
+                        node.location(),
+                        "AssignNode missing operand"));
         }
         
         operand->accept(*this);
@@ -226,14 +274,17 @@ public:
 
     void visit(VarNode& node) override 
     {
-        last_value_ = table_.lookup(node.name());
+        last_value_ = table_.lookup(node.name(), node.location());
     }
 
     void visit(IfNode& node) override
     {
         auto* cond = node.condition();
         if (!cond) {
-            throw std::runtime_error("Missing condition");
+            throw std::runtime_error(
+                    make_runtime_error(
+                        node.location(),
+                        "Missing condition"));
         }
         validate_evaluable_node(*cond, "Invalid condition");
         auto* then_branch = node.then_branch();
@@ -242,7 +293,10 @@ public:
         cond->accept(*this);
         if (last_value_) {
             if(then_branch == nullptr) {
-                throw std::runtime_error("Missing then branch");
+                throw std::runtime_error(
+                        make_runtime_error(
+                            node.location(),
+                            "Missing then branch"));
             }
             then_branch->accept(*this);
         } else if (else_branch) {
@@ -256,14 +310,23 @@ public:
         auto* body = node.body();
         
         if (!cond) {
-            throw std::runtime_error("Missing condition");
+            throw std::runtime_error(
+                    make_runtime_error(
+                        node.location(),
+                        "Missing condition"));
         }
         if (!body) {
-            throw std::runtime_error("Missing while body");
+            throw std::runtime_error(
+                    make_runtime_error(
+                        node.location(),
+                        "Missing while body"));
         }
         validate_evaluable_node(*cond, "Invalid condition");
         if(body->node_type() != base_node_type::scope) {
-            throw std::runtime_error("Invalid while body"); 
+            throw std::runtime_error(
+                    make_runtime_error(
+                        node.location(),
+                        "Invalid while body")); 
         }
         cond->accept(*this);
         while (last_value_) {
@@ -276,18 +339,27 @@ public:
     {
         auto* operand = node.lhs();
         if (!operand) {
-            throw std::runtime_error("InputNode missing operand");
+            throw std::runtime_error(
+                    make_runtime_error(
+                        node.location(),
+                        "InputNode missing operand"));
         }
         int64_t value = 0;
         if(operand->node_type() != ast::base_node_type::var) {
-            throw std::runtime_error("InputNode lhs must be var");
+            throw std::runtime_error(
+                    make_runtime_error(
+                        node.location(),
+                        "InputNode lhs must be var"));
         }
         VarNode* var = static_cast<VarNode*>(operand);
         
         if (!(std::cin >> value)) {
             std::cin.clear();
             std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-            throw std::runtime_error("Input error: expected integer");
+            throw std::runtime_error(
+                    make_runtime_error(
+                        node.location(),
+                        "Input error: expected integer"));
         }
         
         table_.assign_or_create(var->name(), value);
@@ -296,7 +368,10 @@ public:
     void visit(ExprNode& node) override
     {
         if(!(node.expr())) {
-            throw std::runtime_error("Expression is not valid");
+            throw std::runtime_error(
+                    make_runtime_error(
+                        node.location(),
+                        "Expression is not valid"));
         }
         node.expr()->accept(*this);    
     }
@@ -306,8 +381,9 @@ public:
         auto* expr = node.expr();
         if(!expr) {
             throw std::runtime_error(
-                    "Missing expression for printing"
-                    );
+                    make_runtime_error(
+                        node.location(),
+                        "Missing expression for printing"));
         }
 
         validate_evaluable_node(*expr, "Invalid print expression");
@@ -327,12 +403,12 @@ public:
                 stmt->accept(*this);
             }
         } catch ( ... ) {
-            if(need_scope) table_.leave_scope();
+            if(need_scope) table_.leave_scope(node.location());
             throw;
         }
 
         if(need_scope)
-            table_.leave_scope();
+            table_.leave_scope(node.location());
     }
 
     void visit(VarDeclNode& node) override
@@ -343,7 +419,10 @@ public:
         } else {
             last_value_ = 0;
         }
-        table_.declare_in_cur_scope(node.name(), last_value_); 
+        table_.declare_in_cur_scope(
+                node.name(), 
+                last_value_, 
+                node.location()); 
     }
 
 private:
@@ -359,9 +438,13 @@ private:
             case base_node_type::var_decl:
             case base_node_type::print:
             case base_node_type::if_node:
-                throw std::runtime_error(error_msg);
+                throw std::runtime_error(
+                        make_runtime_error(node.location(), error_msg));
             case base_node_type::base:
-                throw std::runtime_error("you cannot use abstract class");
+                throw std::runtime_error(
+                        make_runtime_error(
+                            node.location(),
+                            "you cannot use abstract class"));
             case base_node_type::bin_arith_op:
             case base_node_type::unop:
             case base_node_type::bin_logic_op:
