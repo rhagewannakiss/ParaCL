@@ -40,3 +40,17 @@ target_link_libraries(parser_lib
     PUBLIC
         paracl_core
 )
+
+add_executable(paracl_cli
+    main.cpp
+)
+
+set_target_properties(paracl_cli PROPERTIES
+    OUTPUT_NAME paracl-cli
+    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
+)
+
+target_link_libraries(paracl_cli
+    PRIVATE
+        parser_lib
+)
