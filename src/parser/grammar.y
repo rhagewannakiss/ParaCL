@@ -96,8 +96,10 @@ parser::token_type yylex(parser::semantic_type* yylval,
 program: stmts
     {
         auto scope = std::make_unique<ast::ScopeNode>();
-        for (size_t i = 0; i < $1.size(); ++i) {
-            scope->add_statement(std::move($1[i]));
+        for (size_t i = $1.size(); i-- > 0;) {
+            if ($1[i]) {
+                scope->add_statement(std::move($1[i]));
+            }
         }
         driver->set_ast_root(with_loc(std::move(scope), @$, driver));
     }
@@ -106,7 +108,9 @@ program: stmts
 stmts: stmt stmts
     {
         $$ = std::move($2);
-        $$.push_back(std::move($1));
+        if ($1) {
+            $$.push_back(std::move($1));
+        }
     }
     | %empty
     {
@@ -166,8 +170,10 @@ stmt: expr SEMICOLON
     | LEFT_CURLY_BRACKET stmts RIGHT_CURLY_BRACKET
     {
         auto scope = std::make_unique<ast::ScopeNode>();
-        for (size_t i = 0; i < $2.size(); ++i) {
-            static_cast<ast::ScopeNode*>(scope.get())->add_statement(std::move($2[i]));
+        for (size_t i = $2.size(); i-- > 0;) {
+            if ($2[i]) {
+                static_cast<ast::ScopeNode*>(scope.get())->add_statement(std::move($2[i]));
+            }
         }
         $$ = with_loc(std::move(scope), @$, driver);
     }
