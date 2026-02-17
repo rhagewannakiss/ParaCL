@@ -1,0 +1,10 @@
+x = 7;
+if (x > 0) {
+    if (x % 2 == 0) {
+        print "positive even";
+    } else {
+        print "positive odd";
+    }
+} else {
+    print "negative";
+}

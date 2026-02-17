@@ -1,0 +1,12 @@
+x = 1;
+y = 0;
+
+and_result = x && y;
+or_result = x || y;
+xor_result = x ^ y;
+not_result = !x;
+
+print and_result;
+print or_result;
+print xor_result;
+print not_result;
