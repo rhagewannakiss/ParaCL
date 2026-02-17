@@ -8,6 +8,7 @@
 #include <cstdio>
 #include <stdexcept>
 #include <cstdint>
+#include <array>
 #include "AST/SourceRange.hpp"
 
 namespace ast {
@@ -27,6 +28,7 @@ enum class base_node_type {
     expr,
     if_node,
     while_node,
+    for_node,
     input,
     var_decl
 };
@@ -34,17 +36,9 @@ enum class base_node_type {
 inline void ensure_child_free(bool already_set, 
                               const char* msg) 
 {
-#ifndef NDEBUG
-    if (already_set) {
-        std::fputs(msg, stderr);
-        std::fputs("\n", stderr);
-        assert(!already_set);
-    }    
-#else 
     if (already_set) {
         throw std::logic_error(msg);
     }
-#endif
 }
 
 class BaseNode
@@ -351,7 +345,7 @@ public:
         is_rhs_set = false;
         if (other.lhs()) {
             set_lhs(other.lhs()->clone());
-        }
+   }
         if (other.rhs()) {
             set_rhs(other.rhs()->clone());
         }
@@ -478,7 +472,8 @@ public:
         if(other.condition()) {
             set_condition(other.condition()->clone());
         }
-        if(other.then_branch()) {
+        if(other.then_branch()) 
+        {
             set_then(other.then_branch()->clone());
         }
         if(other.else_branch()) {
@@ -681,6 +676,125 @@ public:
     void accept(Visitor& v) override;
     NodePtr clone() const override {
         return std::make_unique<WhileNode>(*this);
+    }
+};
+
+class ForNode : public BaseNode
+{
+    enum class Slot {
+        init,
+        cond,
+        step,
+        body
+    };
+
+    constexpr static size_t kInvalidIdx = 
+        std::numeric_limits<size_t>::max();
+    std::array<size_t, 4> slot_idx = 
+    {kInvalidIdx, kInvalidIdx, kInvalidIdx, kInvalidIdx};
+
+public:
+    ForNode() : BaseNode(base_node_type::for_node) {}
+
+    explicit ForNode(NodePtr init = nullptr, 
+                     NodePtr cond = nullptr,
+                     NodePtr step = nullptr,
+                     NodePtr body = nullptr)
+        : BaseNode(base_node_type::for_node)
+    {
+        set_slot(std::move(init), Slot::init);
+        set_slot(std::move(cond), Slot::cond);
+        set_slot(std::move(step), Slot::step);
+        set_slot(std::move(body), Slot::body);
+    }
+
+    ForNode(const ForNode& other) 
+        : BaseNode(other) 
+    {
+        slot_idx.fill(kInvalidIdx);
+        
+        if(other.get_slot(Slot::init))
+            set_slot(other.get_slot(Slot::init)->clone(), Slot::init);
+        if(other.get_slot(Slot::cond))
+            set_slot(other.get_slot(Slot::cond)->clone(), Slot::cond);
+        if(other.get_slot(Slot::step))
+            set_slot(other.get_slot(Slot::step)->clone(), Slot::step);
+        if(other.get_slot(Slot::body))
+            set_slot(other.get_slot(Slot::body)->clone(), Slot::body);
+    }
+
+    ForNode& operator=(const ForNode& other) {
+        if(this == &other) return *this;
+        BaseNode::operator=(other);
+        slot_idx.fill(kInvalidIdx);
+        
+        if(other.get_slot(Slot::init))
+            set_slot(other.get_slot(Slot::init)->clone(), Slot::init);
+        if(other.get_slot(Slot::cond))
+            set_slot(other.get_slot(Slot::cond)->clone(), Slot::cond);
+        if(other.get_slot(Slot::step))
+            set_slot(other.get_slot(Slot::step)->clone(), Slot::step);
+        if(other.get_slot(Slot::body))
+            set_slot(other.get_slot(Slot::body)->clone(), Slot::body);
+        return *this;
+    }
+
+    ForNode(ForNode&& other) noexcept 
+        : BaseNode(std::move(other)),
+          slot_idx(other.slot_idx)
+    {
+        other.slot_idx.fill(kInvalidIdx);
+    }
+
+    ForNode& operator=(ForNode&& other) noexcept 
+    {
+        if(this == &other) return *this;
+        BaseNode::operator=(std::move(other));
+        slot_idx = other.slot_idx;
+        other.slot_idx.fill(kInvalidIdx);
+        return *this;
+    }
+
+    BaseNode* get_init() { return get_slot(Slot::init); }
+    BaseNode* get_cond() { return get_slot(Slot::cond); }
+    BaseNode* get_step() { return get_slot(Slot::step); }
+    BaseNode* get_body() { return get_slot(Slot::body); }
+    
+    const BaseNode* get_init() const { return get_slot(Slot::init); }
+    const BaseNode* get_cond() const { return get_slot(Slot::cond); }
+    const BaseNode* get_step() const { return get_slot(Slot::step); }
+    const BaseNode* get_body() const { return get_slot(Slot::body); }
+    
+    void accept(Visitor& v) override;
+    NodePtr clone() const override {
+        return std::make_unique<ForNode>(*this);
+    }
+private:
+    static constexpr size_t idx(Slot s) { 
+        return static_cast<size_t>(s); 
+    }
+
+    void set_slot(NodePtr slot, Slot s) {
+        if (slot) {
+            ensure_child_free(slot_idx[idx(s)] != kInvalidIdx,
+                                "Slot already set");
+            slot_idx[idx(s)] = children().size();
+            add_child(std::move(slot));
+        }     
+    }
+
+    const BaseNode* get_slot(Slot s) const {
+        if (slot_idx[idx(s)] != kInvalidIdx) {
+            return children()[slot_idx[idx(s)]].get();
+        }
+        return nullptr;
+    }
+
+    BaseNode* get_slot(Slot s) {
+        if (slot_idx[idx(s)] != kInvalidIdx) {
+            return children()[slot_idx[idx(s)]].get();
+        }
+        return nullptr;
     }
 };
 
