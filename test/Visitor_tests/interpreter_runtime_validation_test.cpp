@@ -162,6 +162,10 @@ inline ast::BaseNode::NodePtr MakeWhileBodyScope() {
     return std::make_unique<ast::ScopeNode>();
 }
 
+inline ast::BaseNode::NodePtr MakeForBodyScope() {
+    return std::make_unique<ast::ScopeNode>();
+}
+
 TEST(IfNodeUnitTest, CheckAvailableNodesForCondition) {
     ast::Interpreter interpreter;
 
@@ -339,6 +343,78 @@ TEST(WhileNodeUnitTest, CheckAvailableNodesForBody) {
     {
         ast::WhileNode node(
             std::make_unique<ast::ValueNode>(1),
+            std::make_unique<ast::AssignNode>(
+                std::make_unique<ast::VarNode>("x"),
+                std::make_unique<ast::ValueNode>(1)
+            )
+        );
+        EXPECT_THROW(node.accept(interpreter), std::runtime_error);
+    }
+}
+
+TEST(ForNodeUnitTest, CheckAvailableNodesForCondition) {
+    ast::Interpreter interpreter;
+
+    {
+        ast::ForNode node(
+            nullptr,
+            std::make_unique<ast::AssignNode>(
+                std::make_unique<ast::VarNode>("x"),
+                std::make_unique<ast::ValueNode>(1)
+            ),
+            nullptr,
+            MakeForBodyScope()
+        );
+        EXPECT_THROW(node.accept(interpreter), std::runtime_error);
+    }
+
+    {
+        ast::ForNode node(
+            nullptr,
+            std::make_unique<ast::PrintNode>(
+                std::make_unique<ast::ValueNode>(1)
+            ),
+            nullptr,
+            MakeForBodyScope()
+        );
+        EXPECT_THROW(node.accept(interpreter), std::runtime_error);
+    }
+
+    {
+        ast::ForNode node(
+            nullptr,
+            std::make_unique<ast::IfNode>(
+                std::make_unique<ast::ValueNode>(0),
+                std::make_unique<ast::ExprNode>(std::make_unique<ast::ValueNode>(1)),
+                nullptr
+            ),
+            nullptr,
+            MakeForBodyScope()
+        );
+        EXPECT_THROW(node.accept(interpreter), std::runtime_error);
+    }
+}
+
+TEST(ForNodeUnitTest, CheckAvailableNodesForBody) {
+    ast::Interpreter interpreter;
+
+    {
+        ast::ForNode node(
+            nullptr,
+            std::make_unique<ast::ValueNode>(1),
+            nullptr,
+            std::make_unique<ast::ExprNode>(
+                std::make_unique<ast::ValueNode>(1)
+            )
+        );
+        EXPECT_THROW(node.accept(interpreter), std::runtime_error);
+    }
+
+    {
+        ast::ForNode node(
+            nullptr,
+            std::make_unique<ast::ValueNode>(1),
+            nullptr,
             std::make_unique<ast::AssignNode>(
                 std::make_unique<ast::VarNode>("x"),
                 std::make_unique<ast::ValueNode>(1)

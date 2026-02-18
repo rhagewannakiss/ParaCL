@@ -53,3 +53,14 @@ TEST(InterpreterExprErrorTest, BinLogicOpNodeMissingOperandTest) {
         EXPECT_THROW(node.accept(interpreter), std::runtime_error);
     }
 }
+
+TEST(InterpreterExprErrorTest, ForNodeCannotBeUsedAsPrintExpression) {
+    ast::Interpreter interpreter;
+    ast::PrintNode node(std::make_unique<ast::ForNode>(
+        nullptr,
+        std::make_unique<ast::ValueNode>(0),
+        nullptr,
+        std::make_unique<ast::ScopeNode>()));
+
+    EXPECT_THROW(node.accept(interpreter), std::runtime_error);
+}

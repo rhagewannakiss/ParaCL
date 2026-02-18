@@ -125,3 +125,34 @@ TEST(InterpreterExprTest, ExprNodeTest) {
         std::make_unique<ast::ValueNode>(123)));
     EXPECT_EQ(RunAndCapture(valid_node), "123\n");
 }
+
+TEST(InterpreterExprTest, ForNodeUsesExpressionNodesInCondAndStepTest) {
+    ast::ScopeNode root;
+    root.add_statement(std::make_unique<ast::VarDeclNode>(
+        "x",
+        std::make_unique<ast::ValueNode>(0)));
+
+    root.add_statement(std::make_unique<ast::ForNode>(
+        std::make_unique<ast::AssignNode>(
+            std::make_unique<ast::VarNode>("x"),
+            std::make_unique<ast::ValueNode>(0)),
+        std::make_unique<ast::BinLogicOpNode>(
+            ast::bin_logic_op_type::less,
+            std::make_unique<ast::BinArithOpNode>(
+                ast::bin_arith_op_type::add,
+                std::make_unique<ast::VarNode>("x"),
+                std::make_unique<ast::ValueNode>(0)),
+            std::make_unique<ast::ValueNode>(3)),
+        std::make_unique<ast::AssignNode>(
+            std::make_unique<ast::VarNode>("x"),
+            std::make_unique<ast::BinArithOpNode>(
+                ast::bin_arith_op_type::add,
+                std::make_unique<ast::VarNode>("x"),
+                std::make_unique<ast::ValueNode>(1))),
+        std::make_unique<ast::ScopeNode>()));
+
+    root.add_statement(std::make_unique<ast::PrintNode>(
+        std::make_unique<ast::VarNode>("x")));
+
+    EXPECT_EQ(RunAndCapture(root), "3\n");
+}
