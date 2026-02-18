@@ -204,6 +204,50 @@ TEST(BaseSmokeTest, VarDeclNodeTest) {
     EXPECT_EQ(vd2.init_expr(), nullptr);
 }
 
+TEST(BaseSmokeTest, ForNodeFullTest) {
+    auto i = std::make_unique<ast::AssignNode>(
+        std::make_unique<ast::VarNode>("var"), 
+        std::make_unique<ast::ValueNode>(69)
+    );
+    auto c = std::make_unique<ast::BinLogicOpNode>(
+        ast::bin_logic_op_type::less,
+        std::make_unique<ast::VarNode>("var"),
+        std::make_unique<ast::ValueNode>(96)
+    );
+    auto s = std::make_unique<ast::BinArithOpNode>(
+        ast::bin_arith_op_type::add,
+        std::make_unique<ast::VarNode>("var"),
+        std::make_unique<ast::ValueNode>(1)
+    );
+    auto b = std::make_unique<ast::PrintNode>(
+        std::make_unique<ast::VarNode>("var") 
+    );
+
+    ast::ForNode f(std::move(i), std::move(c), std::move(s), std::move(b));
+    EXPECT_NE(f.get_init(), nullptr);
+    EXPECT_NE(f.get_cond(), nullptr);
+    EXPECT_NE(f.get_step(), nullptr);
+    EXPECT_NE(f.get_body(), nullptr);
+}
+
+TEST(BaseSmokeTest, ForNodeMinimalTest) {
+    auto c = std::make_unique<ast::BinLogicOpNode>(
+        ast::bin_logic_op_type::less,
+        std::make_unique<ast::VarNode>("var"),
+        std::make_unique<ast::ValueNode>(96)
+    );
+
+    auto b = std::make_unique<ast::PrintNode>(
+        std::make_unique<ast::VarNode>("var") 
+    );
+
+    ast::ForNode f(nullptr, std::move(c), nullptr, std::move(b));
+    EXPECT_EQ(f.get_init(), nullptr);
+    EXPECT_NE(f.get_cond(), nullptr);
+    EXPECT_EQ(f.get_step(), nullptr);
+    EXPECT_NE(f.get_body(), nullptr);
+}
+
 TEST(BaseSmokeTest, ASTTest) {
     auto v = std::make_unique<ast::ValueNode>(69);
     ast::AST a;

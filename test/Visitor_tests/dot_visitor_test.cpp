@@ -85,3 +85,33 @@ TEST(DotVisitorTest, ComplexTreeContainsControlFlowAndVarDeclLabels) {
     EXPECT_NE(dot.find("print\\nprint\\nADDR"), std::string::npos);
     EXPECT_NE(dot.find("n0 -> n1"), std::string::npos);
 }
+
+TEST(DotVisitorTest, ForNodeGraphContainsForLabelAndEdges) {
+    auto root = std::make_unique<ast::ScopeNode>();
+
+    auto for_body = std::make_unique<ast::ScopeNode>();
+    for_body->add_statement(std::make_unique<ast::PrintNode>(
+        std::make_unique<ast::VarNode>("i")));
+
+    root->add_statement(std::make_unique<ast::ForNode>(
+        std::make_unique<ast::AssignNode>(
+            std::make_unique<ast::VarNode>("i"),
+            std::make_unique<ast::ValueNode>(0)),
+        std::make_unique<ast::BinLogicOpNode>(
+            ast::bin_logic_op_type::less,
+            std::make_unique<ast::VarNode>("i"),
+            std::make_unique<ast::ValueNode>(2)),
+        std::make_unique<ast::AssignNode>(
+            std::make_unique<ast::VarNode>("i"),
+            std::make_unique<ast::BinArithOpNode>(
+                ast::bin_arith_op_type::add,
+                std::make_unique<ast::VarNode>("i"),
+                std::make_unique<ast::ValueNode>(1))),
+        std::move(for_body)));
+
+    ast::AST ast_tree(std::move(root));
+    const std::string dot = MakeDot(ast_tree);
+
+    EXPECT_NE(dot.find("for\\nfor\\nADDR"), std::string::npos);
+    EXPECT_NE(dot.find("n0 -> n1"), std::string::npos);
+}

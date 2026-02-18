@@ -49,10 +49,38 @@ int main()
         std::move(cond),
         std::move(while_body));
 
+    auto for_body = std::make_unique<ScopeNode>();
+    for_body->add_statement(std::make_unique<PrintNode>(
+        std::make_unique<VarNode>("i")));
+
+    auto for_init = std::make_unique<VarDeclNode>(
+        "i",
+        std::make_unique<ValueNode>(0));
+
+    auto for_cond = std::make_unique<BinLogicOpNode>(
+        bin_logic_op_type::less,
+        std::make_unique<VarNode>("i"),
+        std::make_unique<ValueNode>(3));
+
+    auto for_step_expr = std::make_unique<BinArithOpNode>(
+        bin_arith_op_type::add,
+        std::make_unique<VarNode>("i"),
+        std::make_unique<ValueNode>(1));
+    auto for_step = std::make_unique<AssignNode>(
+        std::make_unique<VarNode>("i"),
+        std::move(for_step_expr));
+
+    auto for_node = std::make_unique<ForNode>(
+        std::move(for_init),
+        std::move(for_cond),
+        std::move(for_step),
+        std::move(for_body));
+
     std::vector<BaseNode::NodePtr> stmts;
     stmts.push_back(std::move(assign_init));
     stmts.push_back(std::move(print_a));
     stmts.push_back(std::move(while_node));
+    stmts.push_back(std::move(for_node));
 
     auto root = std::make_unique<ScopeNode>(std::move(stmts));
     AST ast(std::move(root));

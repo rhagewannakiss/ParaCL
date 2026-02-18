@@ -133,3 +133,34 @@ TEST(InterpreterStmtTest, PrintNodeMissingExprThrows) {
     ast::PrintNode node;
     EXPECT_THROW(node.accept(interpreter), std::runtime_error);
 }
+
+TEST(InterpreterStmtTest, ForNodeWithoutStepUsesBodyUpdateTest) {
+    ast::ScopeNode root;
+    root.add_statement(std::make_unique<ast::VarDeclNode>(
+        "x",
+        std::make_unique<ast::ValueNode>(0)));
+
+    auto for_body = std::make_unique<ast::ScopeNode>();
+    for_body->add_statement(std::make_unique<ast::AssignNode>(
+        std::make_unique<ast::VarNode>("x"),
+        std::make_unique<ast::BinArithOpNode>(
+            ast::bin_arith_op_type::add,
+            std::make_unique<ast::VarNode>("x"),
+            std::make_unique<ast::ValueNode>(1))));
+
+    root.add_statement(std::make_unique<ast::ForNode>(
+        std::make_unique<ast::AssignNode>(
+            std::make_unique<ast::VarNode>("x"),
+            std::make_unique<ast::ValueNode>(0)),
+        std::make_unique<ast::BinLogicOpNode>(
+            ast::bin_logic_op_type::less,
+            std::make_unique<ast::VarNode>("x"),
+            std::make_unique<ast::ValueNode>(3)),
+        nullptr,
+        std::move(for_body)));
+
+    root.add_statement(std::make_unique<ast::PrintNode>(
+        std::make_unique<ast::VarNode>("x")));
+
+    EXPECT_EQ(RunAndCapture(root), "3\n");
+}

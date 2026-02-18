@@ -1,6 +1,6 @@
 #pragma once
 
-#include <ostream>
+#include <ostream> 
 #include <sstream>
 #include <string>
 #include <unordered_map>
@@ -73,6 +73,14 @@ public:
     void visit(WhileNode& node) override
     {
         emit_node(node, "while");
+        emit_edges(node);
+        for (const auto& child : node.children()) {
+            child->accept(*this);
+        }
+    }
+    void visit(ForNode& node) override
+    {
+        emit_node(node, "for");
         emit_edges(node);
         for (const auto& child : node.children()) {
             child->accept(*this);
@@ -186,6 +194,7 @@ private:
             case base_node_type::input:        return "input";
             case base_node_type::base:         return "base";
             case base_node_type::var_decl:     return "var_decl";
+            case base_node_type::for_node:     return "for";
         }
         return "unknown";
     }

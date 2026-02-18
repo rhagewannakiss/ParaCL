@@ -145,6 +145,113 @@ TEST(InterpreterControlFlowTest, WhileNodeMissingBodyThrows) {
     EXPECT_THROW(node.accept(interpreter), std::runtime_error);
 }
 
+TEST(InterpreterControlFlowTest, ForNodeMultipleIterationsTest) {
+    ast::ScopeNode root;
+    root.add_statement(std::make_unique<ast::VarDeclNode>(
+        "x",
+        std::make_unique<ast::ValueNode>(0)));
+
+    auto for_body = std::make_unique<ast::ScopeNode>();
+
+    auto for_node = std::make_unique<ast::ForNode>(
+        std::make_unique<ast::AssignNode>(
+            std::make_unique<ast::VarNode>("x"),
+            std::make_unique<ast::ValueNode>(0)),
+        std::make_unique<ast::BinLogicOpNode>(
+            ast::bin_logic_op_type::less,
+            std::make_unique<ast::VarNode>("x"),
+            std::make_unique<ast::ValueNode>(3)),
+        std::make_unique<ast::AssignNode>(
+            std::make_unique<ast::VarNode>("x"),
+            std::make_unique<ast::BinArithOpNode>(
+                ast::bin_arith_op_type::add,
+                std::make_unique<ast::VarNode>("x"),
+                std::make_unique<ast::ValueNode>(1))),
+        std::move(for_body));
+
+    root.add_statement(std::move(for_node));
+    root.add_statement(std::make_unique<ast::PrintNode>(
+        std::make_unique<ast::VarNode>("x")));
+
+    EXPECT_EQ(RunAndCapture(root), "3\n");
+}
+
+TEST(InterpreterControlFlowTest, ForNodeZeroIterationsTest) {
+    ast::ScopeNode root;
+    root.add_statement(std::make_unique<ast::VarDeclNode>(
+        "x",
+        std::make_unique<ast::ValueNode>(0)));
+
+    auto for_node = std::make_unique<ast::ForNode>(
+        std::make_unique<ast::AssignNode>(
+            std::make_unique<ast::VarNode>("x"),
+            std::make_unique<ast::ValueNode>(0)),
+        std::make_unique<ast::BinLogicOpNode>(
+            ast::bin_logic_op_type::less,
+            std::make_unique<ast::VarNode>("x"),
+            std::make_unique<ast::ValueNode>(0)),
+        std::make_unique<ast::AssignNode>(
+            std::make_unique<ast::VarNode>("x"),
+            std::make_unique<ast::BinArithOpNode>(
+                ast::bin_arith_op_type::add,
+                std::make_unique<ast::VarNode>("x"),
+                std::make_unique<ast::ValueNode>(1))),
+        std::make_unique<ast::ScopeNode>());
+
+    root.add_statement(std::move(for_node));
+    root.add_statement(std::make_unique<ast::PrintNode>(
+        std::make_unique<ast::VarNode>("x")));
+
+    EXPECT_EQ(RunAndCapture(root), "0\n");
+}
+
+TEST(InterpreterControlFlowTest, ForNodeMissingConditionThrows) {
+    ast::Interpreter interpreter;
+    ast::ForNode node(
+        nullptr,
+        nullptr,
+        nullptr,
+        std::make_unique<ast::ScopeNode>());
+    EXPECT_THROW(node.accept(interpreter), std::runtime_error);
+}
+
+TEST(InterpreterControlFlowTest, ForNodeMissingBodyThrows) {
+    ast::Interpreter interpreter;
+    ast::ForNode node(
+        nullptr,
+        std::make_unique<ast::ValueNode>(1),
+        nullptr,
+        nullptr);
+    EXPECT_THROW(node.accept(interpreter), std::runtime_error);
+}
+
+TEST(InterpreterControlFlowTest, ForNodeHeaderScopeIsolationTest) {
+    ast::ScopeNode root;
+
+    auto for_node = std::make_unique<ast::ForNode>(
+        std::make_unique<ast::VarDeclNode>(
+            "i",
+            std::make_unique<ast::ValueNode>(0)),
+        std::make_unique<ast::BinLogicOpNode>(
+            ast::bin_logic_op_type::less,
+            std::make_unique<ast::VarNode>("i"),
+            std::make_unique<ast::ValueNode>(1)),
+        std::make_unique<ast::AssignNode>(
+            std::make_unique<ast::VarNode>("i"),
+            std::make_unique<ast::BinArithOpNode>(
+                ast::bin_arith_op_type::add,
+                std::make_unique<ast::VarNode>("i"),
+                std::make_unique<ast::ValueNode>(1))),
+        std::make_unique<ast::ScopeNode>());
+
+    root.add_statement(std::move(for_node));
+    root.add_statement(std::make_unique<ast::PrintNode>(
+        std::make_unique<ast::VarNode>("i")));
+
+    ast::Interpreter interpreter;
+    EXPECT_THROW(root.accept(interpreter), std::runtime_error);
+}
+
 TEST(InterpreterControlFlowTest, ScopeNodeShadowingTest) {
     ast::ScopeNode root;
     root.add_statement(std::make_unique<ast::VarDeclNode>(

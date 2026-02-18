@@ -334,6 +334,53 @@ public:
             cond->accept(*this);
         }
     }
+
+    void visit(ForNode& node) override
+    {
+        auto* init = node.get_init();
+        auto* cond = node.get_cond();
+        auto* step = node.get_step();
+        auto* body = node.get_body();
+
+        if (!cond) {
+            throw std::runtime_error(
+                    make_runtime_error(
+                        node.location(),
+                        "Missing condition"));
+        }
+
+        if (!body) {
+            throw std::runtime_error(
+                    make_runtime_error(
+                        node.location(),
+                        "Missing for body"));
+        }
+
+        validate_evaluable_node(*cond, "Invalid condition");
+        if(body->node_type() != base_node_type::scope) {
+            throw std::runtime_error(
+                    make_runtime_error(
+                        node.location(),
+                        "Invalid for body")); 
+        }
+
+        table_.enter_scope();
+
+        try {
+            if (init) init->accept(*this);
+            cond->accept(*this);
+            while (last_value_) {
+                body->accept(*this);
+                if(step)step->accept(*this);
+                cond->accept(*this);
+            }
+        } catch(...) {
+            table_.leave_scope(node.location());
+            throw;
+        }
+        
+        table_.leave_scope(node.location());
+    }
     
     void visit(InputNode& node) override
     {
@@ -438,6 +485,7 @@ private:
             case base_node_type::var_decl:
             case base_node_type::print:
             case base_node_type::if_node:
+            case base_node_type::for_node:
                 throw std::runtime_error(
                         make_runtime_error(node.location(), error_msg));
             case base_node_type::base:
