@@ -6,8 +6,8 @@
 #include <string>
 
 #include "gtest/gtest.h"
-#include "../include/AST.hpp"
-#include "../include/DotVisitor.hpp"
+#include "AST/AST.hpp"
+#include "Visitors/DotVisitor.hpp"
 
 namespace {
 bool check_node_equality_val(const ast::BaseNode* node1,
@@ -101,6 +101,16 @@ bool check_node_equality_val(const ast::BaseNode* node1,
                 return check_node_equality_val(va->condition(), vb->condition()) &&
                        check_node_equality_val(va->body(), vb->body());
             }
+        case ast::base_node_type::for_node:
+            {
+                auto* va = dynamic_cast<const ast::ForNode*>(node1);
+                auto* vb = dynamic_cast<const ast::ForNode*>(node2);
+                if (!va || !vb) return false;
+                return check_node_equality_val(va->get_init(), vb->get_init()) &&
+                       check_node_equality_val(va->get_cond(), vb->get_cond()) &&
+                       check_node_equality_val(va->get_step(), vb->get_step()) &&
+                       check_node_equality_val(va->get_body(), vb->get_body());
+            }
         case ast::base_node_type::input:
             {
                 auto* va = dynamic_cast<const ast::InputNode*>(node1);
@@ -121,6 +131,18 @@ bool check_node_equality_val(const ast::BaseNode* node1,
                         return false;
                 }
                 return true;
+            }
+        case ast::base_node_type::var_decl:
+            {
+                auto* va = dynamic_cast<const ast::VarDeclNode*>(node1);
+                auto* vb = dynamic_cast<const ast::VarDeclNode*>(node2);
+                if(!va || !vb) return false;
+                const auto& na = va->name();
+                const auto& nb = vb->name();
+                if (na != nb) return false;
+                const auto ia = va->init_expr();
+                const auto ib = vb->init_expr();
+                return check_node_equality_val(ia, ib);
             }
         case ast::base_node_type::base:
         default:
@@ -174,14 +196,14 @@ TEST(ASTCloneTest, Test1)
     auto lit1 = std::make_unique<ast::ValueNode>(1);
     auto lit2 = std::make_unique<ast::ValueNode>(2);
 
-    auto var_a1 = std::make_unique<ast::VarNode>("a");
     auto add    = std::make_unique<ast::BinArithOpNode>(
         ast::bin_arith_op_type::add,
         std::move(lit1),
         std::move(lit2));
-    auto assign_init = std::make_unique<ast::AssignNode>(
-        std::move(var_a1), 
+    auto decl_a = std::make_unique<ast::VarDeclNode>(
+        "a",
         std::move(add));
+    auto decl_b = std::make_unique<ast::VarDeclNode>("b");
 
     auto var_a2 =  std::make_unique<ast::VarNode>("a");
     auto print_a = std::make_unique<ast::PrintNode>(
@@ -212,10 +234,38 @@ TEST(ASTCloneTest, Test1)
         std::move(cond), 
         std::move(while_body));
 
+    auto for_init = std::make_unique<ast::AssignNode>(
+        std::make_unique<ast::VarNode>("b"),
+        std::make_unique<ast::ValueNode>(0));
+
+    auto for_cond = std::make_unique<ast::BinLogicOpNode>(
+        ast::bin_logic_op_type::less,
+        std::make_unique<ast::VarNode>("b"),
+        std::make_unique<ast::ValueNode>(3));
+
+    auto for_step = std::make_unique<ast::AssignNode>(
+        std::make_unique<ast::VarNode>("b"),
+        std::make_unique<ast::BinArithOpNode>(
+            ast::bin_arith_op_type::add,
+            std::make_unique<ast::VarNode>("b"),
+            std::make_unique<ast::ValueNode>(1)));
+
+    auto for_body = std::make_unique<ast::ScopeNode>();
+    for_body->add_statement(std::make_unique<ast::PrintNode>(
+        std::make_unique<ast::VarNode>("b")));
+
+    auto for_node = std::make_unique<ast::ForNode>(
+        std::move(for_init),
+        std::move(for_cond),
+        std::move(for_step),
+        std::move(for_body));
+
     std::vector<ast::BaseNode::NodePtr> stmts;
-    stmts.push_back(std::move(assign_init));
+    stmts.push_back(std::move(decl_a));
+    stmts.push_back(std::move(decl_b));
     stmts.push_back(std::move(print_a));
     stmts.push_back(std::move(while_node));
+    stmts.push_back(std::move(for_node));
 
     auto root = std::make_unique<ast::ScopeNode>(
         std::move(stmts));

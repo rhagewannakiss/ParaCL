@@ -6,10 +6,11 @@
 #include <string>
 #include <vector>
 #include <cstdio>
-
-#ifdef NDEBUG
 #include <stdexcept>
-#endif
+#include <cstdint>
+#include <array>
+#include "AST/SourceRange.hpp"
+
 namespace ast {
 
 struct Visitor;
@@ -27,6 +28,7 @@ enum class base_node_type {
     expr,
     if_node,
     while_node,
+    for_node,
     input,
     var_decl
 };
@@ -34,17 +36,9 @@ enum class base_node_type {
 inline void ensure_child_free(bool already_set, 
                               const char* msg) 
 {
-#ifndef NDEBUG
-    if (already_set) {
-        std::fputs(msg, stderr);
-        std::fputs("\n", stderr);
-        assert(!already_set);
-    }    
-#else 
     if (already_set) {
         throw std::logic_error(msg);
     }
-#endif
 }
 
 class BaseNode
@@ -56,6 +50,7 @@ private:
     base_node_type node_type_ = base_node_type::base;
     BaseNode* parent_ = nullptr;
     std::deque<NodePtr> children_{};
+    SourceRange loc_;
 
 protected:
     void set_child_parent(BaseNode* child)
@@ -66,12 +61,14 @@ protected:
     }
 
     BaseNode(const BaseNode& other) : 
-        node_type_(other.node_type_) {}
+        node_type_(other.node_type_),
+        loc_(other.loc_) {}
     
     BaseNode& operator=(const BaseNode& other)
     {
         if (this == &other) return *this;
         node_type_ = other.node_type_;
+        loc_ = other.loc_;
         parent_ = nullptr;
         children_.clear();
         return *this;
@@ -82,6 +79,7 @@ protected:
         parent_(nullptr), 
         children_(std::move(other.children_))
     {
+        loc_ = other.loc_;
         for (auto& child : children_) {
             set_child_parent(child.get());
         }
@@ -91,6 +89,7 @@ protected:
     {
         if (this == &other) return *this;
         node_type_ = other.node_type_;
+        loc_ = other.loc_;
         parent_ = nullptr;
         children_ = std::move(other.children_);
         for (auto& child : children_) {
@@ -101,8 +100,9 @@ protected:
 
 
 public:
-    explicit BaseNode(base_node_type node_type) : 
-                node_type_(node_type) {}
+    explicit BaseNode(base_node_type node_type, SourceRange loc = SourceRange()) : 
+                node_type_(node_type),
+                loc_(loc) {}
     virtual ~BaseNode() = default;
 
     base_node_type node_type() const            { return node_type_; }
@@ -111,18 +111,27 @@ public:
 
     void add_child(NodePtr child)
     {
+        if(!child) {
+            throw std::runtime_error("Trying to add null child");    
+        }
         set_child_parent(child.get());
         children_.push_back(std::move(child));
     }
 
     void add_child_front(NodePtr child)
     {
+        if(!child) {
+            throw std::runtime_error("Trying to add null child front");
+        }
         set_child_parent(child.get());
         children_.push_front(std::move(child));
     }
 
     const std::deque<NodePtr>& children() const { return children_; }
     std::deque<NodePtr>& children() { return children_; }
+    
+    void set_location(SourceRange loc) { loc_ = loc; }
+    const SourceRange& location() const { return loc_; }
 
     virtual void accept(Visitor& v) = 0;
     virtual NodePtr clone() const = 0;
@@ -130,10 +139,10 @@ public:
 
 class ValueNode : public BaseNode
 {
-    int value_;
+    int64_t value_;
 
 public:
-    explicit ValueNode(int value) : 
+    explicit ValueNode(int64_t value) : 
         BaseNode(base_node_type::value), 
         value_(value) {}
     
@@ -150,7 +159,7 @@ public:
     ValueNode(ValueNode&& other) noexcept = default;
     ValueNode& operator=(ValueNode&& other) noexcept = default;
 
-    int value() const { return value_; }
+    int64_t value() const { return value_; }
     void accept(Visitor& v) override;
 
     NodePtr clone() const override {
@@ -336,7 +345,7 @@ public:
         is_rhs_set = false;
         if (other.lhs()) {
             set_lhs(other.lhs()->clone());
-        }
+   }
         if (other.rhs()) {
             set_rhs(other.rhs()->clone());
         }
@@ -463,7 +472,8 @@ public:
         if(other.condition()) {
             set_condition(other.condition()->clone());
         }
-        if(other.then_branch()) {
+        if(other.then_branch()) 
+        {
             set_then(other.then_branch()->clone());
         }
         if(other.else_branch()) {
@@ -669,6 +679,125 @@ public:
     }
 };
 
+class ForNode : public BaseNode
+{
+    enum class Slot {
+        init,
+        cond,
+        step,
+        body
+    };
+
+    constexpr static size_t kInvalidIdx = 
+        std::numeric_limits<size_t>::max();
+    std::array<size_t, 4> slot_idx = 
+    {kInvalidIdx, kInvalidIdx, kInvalidIdx, kInvalidIdx};
+
+public:
+    ForNode() : BaseNode(base_node_type::for_node) {}
+
+    explicit ForNode(NodePtr init = nullptr, 
+                     NodePtr cond = nullptr,
+                     NodePtr step = nullptr,
+                     NodePtr body = nullptr)
+        : BaseNode(base_node_type::for_node)
+    {
+        set_slot(std::move(init), Slot::init);
+        set_slot(std::move(cond), Slot::cond);
+        set_slot(std::move(step), Slot::step);
+        set_slot(std::move(body), Slot::body);
+    }
+
+    ForNode(const ForNode& other) 
+        : BaseNode(other) 
+    {
+        slot_idx.fill(kInvalidIdx);
+        
+        if(other.get_slot(Slot::init))
+            set_slot(other.get_slot(Slot::init)->clone(), Slot::init);
+        if(other.get_slot(Slot::cond))
+            set_slot(other.get_slot(Slot::cond)->clone(), Slot::cond);
+        if(other.get_slot(Slot::step))
+            set_slot(other.get_slot(Slot::step)->clone(), Slot::step);
+        if(other.get_slot(Slot::body))
+            set_slot(other.get_slot(Slot::body)->clone(), Slot::body);
+    }
+
+    ForNode& operator=(const ForNode& other) {
+        if(this == &other) return *this;
+        BaseNode::operator=(other);
+        slot_idx.fill(kInvalidIdx);
+        
+        if(other.get_slot(Slot::init))
+            set_slot(other.get_slot(Slot::init)->clone(), Slot::init);
+        if(other.get_slot(Slot::cond))
+            set_slot(other.get_slot(Slot::cond)->clone(), Slot::cond);
+        if(other.get_slot(Slot::step))
+            set_slot(other.get_slot(Slot::step)->clone(), Slot::step);
+        if(other.get_slot(Slot::body))
+            set_slot(other.get_slot(Slot::body)->clone(), Slot::body);
+        return *this;
+    }
+
+    ForNode(ForNode&& other) noexcept 
+        : BaseNode(std::move(other)),
+          slot_idx(other.slot_idx)
+    {
+        other.slot_idx.fill(kInvalidIdx);
+    }
+
+    ForNode& operator=(ForNode&& other) noexcept 
+    {
+        if(this == &other) return *this;
+        BaseNode::operator=(std::move(other));
+        slot_idx = other.slot_idx;
+        other.slot_idx.fill(kInvalidIdx);
+        return *this;
+    }
+
+    BaseNode* get_init() { return get_slot(Slot::init); }
+    BaseNode* get_cond() { return get_slot(Slot::cond); }
+    BaseNode* get_step() { return get_slot(Slot::step); }
+    BaseNode* get_body() { return get_slot(Slot::body); }
+    
+    const BaseNode* get_init() const { return get_slot(Slot::init); }
+    const BaseNode* get_cond() const { return get_slot(Slot::cond); }
+    const BaseNode* get_step() const { return get_slot(Slot::step); }
+    const BaseNode* get_body() const { return get_slot(Slot::body); }
+    
+    void accept(Visitor& v) override;
+    NodePtr clone() const override {
+        return std::make_unique<ForNode>(*this);
+    }
+private:
+    static constexpr size_t idx(Slot s) { 
+        return static_cast<size_t>(s); 
+    }
+
+    void set_slot(NodePtr slot, Slot s) {
+        if (slot) {
+            ensure_child_free(slot_idx[idx(s)] != kInvalidIdx,
+                                "Slot already set");
+            slot_idx[idx(s)] = children().size();
+            add_child(std::move(slot));
+        }     
+    }
+
+    const BaseNode* get_slot(Slot s) const {
+        if (slot_idx[idx(s)] != kInvalidIdx) {
+            return children()[slot_idx[idx(s)]].get();
+        }
+        return nullptr;
+    }
+
+    BaseNode* get_slot(Slot s) {
+        if (slot_idx[idx(s)] != kInvalidIdx) {
+            return children()[slot_idx[idx(s)]].get();
+        }
+        return nullptr;
+    }
+};
+
 class InputNode : public BaseNode
 {
 public:
@@ -798,7 +927,7 @@ enum class bin_arith_op_type {
     sub,
     mul,
     div,
-    pow,
+    mod,
 };
 
 class BinArithOpNode : public BaseNode
@@ -917,6 +1046,7 @@ enum class bin_logic_op_type {
     not_equal,
     logical_and,
     logical_or,
+    bitwise_xor,
 };
 
 class BinLogicOpNode : public BaseNode
@@ -1094,9 +1224,9 @@ public:
         if(this == &other) return *this;
         BaseNode::operator=(other);
         const auto& child = other.init_expr();
+        is_init_set = false;
         if(child != nullptr)
         {
-            is_init_set = false;
             set_init_expr(child->clone());
         }
         name_ = other.name_;

@@ -10,7 +10,7 @@ FetchContent_Declare(
 FetchContent_MakeAvailable(googletest)
 
 add_executable(ast_clone_test
-    ast_clone_test.cpp
+    AST_tests/ast_clone_test.cpp
 )
 
 target_link_libraries(ast_clone_test
@@ -20,7 +20,7 @@ target_link_libraries(ast_clone_test
 )
 
 add_executable(ast_print_test
-    ast_print_test.cpp
+    AST_tests/ast_print_test.cpp
 )
 
 target_link_libraries(ast_print_test
@@ -28,5 +28,131 @@ target_link_libraries(ast_print_test
         paracl_core
 )
 
+add_executable(ast_nodes_test
+    AST_tests/ast_nodes_test.cpp
+)
+
+target_link_libraries(ast_nodes_test
+    PRIVATE
+        paracl_core
+        GTest::gtest_main
+)
+
+add_executable(interpreter_runtime_validation_test
+    Visitor_tests/interpreter_runtime_validation_test.cpp
+)
+
+target_link_libraries(interpreter_runtime_validation_test
+    PRIVATE
+        paracl_core
+        GTest::gtest_main
+)
+
+add_executable(interpreter_expr_test
+    Visitor_tests/interpreter_expr_test.cpp
+)
+
+target_link_libraries(interpreter_expr_test
+    PRIVATE
+        paracl_core
+        GTest::gtest_main
+)
+
+add_executable(interpreter_expr_errors_test
+    Visitor_tests/interpreter_expr_errors_test.cpp
+)
+
+target_link_libraries(interpreter_expr_errors_test
+    PRIVATE
+        paracl_core
+        GTest::gtest_main
+)
+
+add_executable(interpreter_short_circuit_test
+    Visitor_tests/interpreter_short_circuit_test.cpp
+)
+
+target_link_libraries(interpreter_short_circuit_test
+    PRIVATE
+        paracl_core
+        GTest::gtest_main
+)
+
+add_executable(interpreter_control_flow_test
+    Visitor_tests/interpreter_control_flow_test.cpp
+)
+
+target_link_libraries(interpreter_control_flow_test
+    PRIVATE
+        paracl_core
+        GTest::gtest_main
+)
+
+add_executable(interpreter_stmt_test
+    Visitor_tests/interpreter_stmt_test.cpp
+)
+
+target_link_libraries(interpreter_stmt_test
+    PRIVATE
+        paracl_core
+        GTest::gtest_main
+)
+
+add_executable(dot_visitor_test
+    Visitor_tests/dot_visitor_test.cpp
+)
+
+target_link_libraries(dot_visitor_test
+    PRIVATE
+        paracl_core
+        GTest::gtest_main
+)
+
+add_executable(lexer_test
+    Parser_tests/lexer_test.cpp
+)
+
+target_link_libraries(lexer_test
+    PRIVATE
+        GTest::gtest_main
+        parser_lib
+        paracl_core
+)
+
+target_include_directories(lexer_test
+    PRIVATE
+        ${PROJECT_BINARY_DIR}/src/parser
+        ${CMAKE_SOURCE_DIR}/include
+       ${FLEX_INCLUDE_DIRS}
+)
+
+add_executable(parser_test
+    Parser_tests/parser_test.cpp
+)
+
+target_link_libraries(parser_test
+    PRIVATE
+        GTest::gtest_main
+        parser_lib
+        paracl_core
+)
+
+target_include_directories(parser_test
+    PRIVATE
+        ${PROJECT_BINARY_DIR}/src/parser
+        ${CMAKE_SOURCE_DIR}/include
+       ${FLEX_INCLUDE_DIRS}
+)
+
 include(GoogleTest)
 gtest_discover_tests(ast_clone_test)
+gtest_discover_tests(ast_nodes_test)
+gtest_discover_tests(interpreter_runtime_validation_test)
+gtest_discover_tests(interpreter_expr_test)
+gtest_discover_tests(interpreter_expr_errors_test)
+gtest_discover_tests(interpreter_short_circuit_test)
+gtest_discover_tests(interpreter_control_flow_test)
+gtest_discover_tests(interpreter_stmt_test)
+gtest_discover_tests(dot_visitor_test)
+gtest_discover_tests(lexer_test)
+gtest_discover_tests(parser_test)

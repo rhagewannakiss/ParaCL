@@ -2,13 +2,15 @@
 #define DRIVER_HPP
 
 #include "grammar.tab.hh"
-#include "location.hh"
 #include <FlexLexer.h>
 
 #include <iostream>
-#include <memory>
+#include <map>
 #include <string>
 #include <vector>
+
+#include "AST/AST.hpp"
+#include "driver/location_utils.hpp"
 
 namespace yy {
 
@@ -16,8 +18,8 @@ class NumDriver {
 private:
     FlexLexer* plex_;
     location loc_;
-
-    std::vector<std::pair<std::vector<int>, std::vector<int>>> equations_;
+    ast::AST ast_;
+    int error_cnt_ = 0;
 
 public:
     explicit NumDriver(FlexLexer* plex) : plex_(plex) {}
@@ -45,6 +47,21 @@ public:
         return tt;
     }
 
+    void add_error(const location& loc, const std::string& msg) {
+        auto range = to_source_range(loc);
+        if (!range.file.empty()) {
+            std::cerr << range.file << ":";
+        }
+        std::cerr << "Error at " << loc.begin.line << ":" << loc.begin.column
+                  << ": " << msg << std::endl;
+        error_cnt_++;
+    }
+
+    bool has_errors() const
+    {
+        return error_cnt_ > 0;
+    }
+
     bool parse() {
         parser parser(this);
         bool res = parser.parse();
@@ -58,6 +75,14 @@ public:
 
     const location& get_location() const {
         return loc_;
+    }
+
+    void set_ast_root(std::unique_ptr<ast::BaseNode> root) {
+        ast_.set_root(std::move(root));
+    }
+
+    const ast::AST& get_ast() const {
+        return ast_;
     }
 };
 
