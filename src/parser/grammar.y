@@ -73,6 +73,10 @@ parser::token_type yylex(parser::semantic_type* yylval,
 %nterm <std::unique_ptr<ast::BaseNode>> expr
 %nterm <std::unique_ptr<ast::BaseNode>> stmt
 %nterm <std::unique_ptr<ast::BaseNode>> lvalue
+%nterm <std::unique_ptr<ast::BaseNode>> for_init
+%nterm <std::unique_ptr<ast::BaseNode>> for_cond
+%nterm <std::unique_ptr<ast::BaseNode>> for_step
+%nterm <std::unique_ptr<ast::BaseNode>> for_step_expr
 %nterm <std::unique_ptr<ast::BaseNode>> program
 %nterm <std::vector<std::unique_ptr<ast::BaseNode>>> stmts
 
@@ -167,6 +171,39 @@ stmt: expr SEMICOLON
         error(@3, "Missing condition in while");
         $$ = with_loc(std::make_unique<ast::WhileNode>(std::make_unique<ast::ValueNode>(0), std::move($5)), @$, driver);
     }
+    | FOR LEFT_PAREN for_init for_cond for_step RIGHT_PAREN stmt
+    {
+        std::unique_ptr<ast::BaseNode> body;
+
+        if ($7 && $7->node_type() == ast::base_node_type::scope) {
+            body = std::move($7);
+        } else {
+            auto scope = std::make_unique<ast::ScopeNode>();
+            if ($7) {
+                scope->add_statement(std::move($7));
+            }
+            body = std::move(scope);
+        }
+
+        $$ = with_loc(std::make_unique<ast::ForNode>(std::move($3), std::move($4), std::move($5), std::move(body)), @$, driver);
+    }
+    | FOR LEFT_PAREN error RIGHT_PAREN stmt
+    {
+        error(@3, "Invalid for loop header");
+        std::unique_ptr<ast::BaseNode> body;
+
+        if ($5 && $5->node_type() == ast::base_node_type::scope) {
+            body = std::move($5);
+        } else {
+            auto scope = std::make_unique<ast::ScopeNode>();
+            if ($5) {
+                scope->add_statement(std::move($5));
+            }
+            body = std::move(scope);
+        }
+
+        $$ = with_loc(std::make_unique<ast::ForNode>(nullptr, nullptr, nullptr, std::move(body)), @$, driver);
+    }
     | LEFT_CURLY_BRACKET stmts RIGHT_CURLY_BRACKET
     {
         auto scope = std::make_unique<ast::ScopeNode>();
@@ -201,6 +238,43 @@ stmt: expr SEMICOLON
 lvalue: VAR
     {
         $$ = with_loc(std::make_unique<ast::VarNode>($1), @$, driver);
+    }
+;
+
+for_init: expr SEMICOLON
+    {
+        $$ = std::move($1);
+    }
+    | SEMICOLON
+    {
+        $$ = nullptr;
+    }
+;
+
+for_cond: expr SEMICOLON
+    {
+        $$ = std::move($1);
+    }
+    | error SEMICOLON
+    {
+        error(@1, "Missing condition in for");
+        $$ = with_loc(std::make_unique<ast::ValueNode>(0), @$, driver);
+    }
+;
+
+for_step: for_step_expr
+    {
+        $$ = std::move($1);
+    }
+    | %empty
+    {
+        $$ = nullptr;
+    }
+;
+
+for_step_expr: lvalue ASSIGNMENT expr
+    {
+        $$ = with_loc(std::make_unique<ast::AssignNode>(std::move($1), std::move($3)), @$, driver);
     }
 ;
 
@@ -316,12 +390,7 @@ expr: expr PLUS expr
     }
     | lvalue ASSIGNMENT expr
     {
-        if ($1->node_type() == ast::base_node_type::var) {
-            auto var = static_cast<ast::VarNode*>($1.get());
-            $$ = with_loc(std::make_unique<ast::VarDeclNode>(var->name(), std::move($3)), @$, driver);
-        } else {
-            $$ = with_loc(std::make_unique<ast::AssignNode>(std::move($1), std::move($3)), @$, driver);
-        }
+        $$ = with_loc(std::make_unique<ast::AssignNode>(std::move($1), std::move($3)), @$, driver);
     }
 ;
 
