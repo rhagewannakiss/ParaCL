@@ -30,7 +30,9 @@ enum class base_node_type {
     while_node,
     for_node,
     input,
-    var_decl
+    var_decl,
+    err,
+    empty
 };
 
 inline void ensure_child_free(bool already_set, 
@@ -1258,6 +1260,54 @@ public:
     void accept(Visitor& v) override;
     NodePtr clone() const override {
         return std::make_unique<VarDeclNode>(*this);
+    }
+};
+
+class ErrorNode : public BaseNode
+{
+public:
+    explicit ErrorNode() : 
+        BaseNode(base_node_type::err) {}
+
+    ErrorNode(const ErrorNode& other) :
+        BaseNode(other) {}
+
+    ErrorNode& operator=(const ErrorNode& other) {
+        if(this == &other) return *this;
+        BaseNode::operator=(other);
+        return *this;
+    }
+
+    ErrorNode(ErrorNode&& other) noexcept = default;
+    ErrorNode& operator=(ErrorNode&& other) noexcept = default;
+
+    void accept(Visitor& v) override;
+    NodePtr clone() const override {
+        return std::make_unique<ErrorNode>(*this);
+    }
+};
+
+class EmptyNode : public BaseNode
+{
+public:
+    explicit EmptyNode() : 
+        BaseNode(base_node_type::empty) {}
+
+    EmptyNode(const EmptyNode& other) :
+        BaseNode(other) {}
+
+    EmptyNode& operator=(const EmptyNode& other) {
+        if(this == &other) return *this;
+        BaseNode::operator=(other);
+        return *this;
+    }
+
+    EmptyNode(EmptyNode&& other) noexcept = default;
+    EmptyNode& operator=(EmptyNode&& other) noexcept = default;
+
+    void accept(Visitor& v) override;
+    NodePtr clone() const override {
+        return std::make_unique<EmptyNode>(*this);
     }
 };
 

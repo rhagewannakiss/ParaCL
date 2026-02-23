@@ -132,6 +132,24 @@ public:
             init_expr->accept(*this);
     }
 
+    void visit(ErrorNode& node) override
+    {
+        emit_node(node, "error");
+        emit_edges(node);
+        for (const auto& child : node.children()) {
+            child->accept(*this);
+        }
+    }
+
+    void visit(EmptyNode& node) override
+    {
+        emit_node(node, "empty");
+        emit_edges(node);
+        for (const auto& child : node.children()) {
+            child->accept(*this);
+        }
+    }
+
     void create_dot(ast::AST& ast) 
     {
         begin_graph();
@@ -195,6 +213,8 @@ private:
             case base_node_type::base:         return "base";
             case base_node_type::var_decl:     return "var_decl";
             case base_node_type::for_node:     return "for";
+            case base_node_type::err:          return "error";
+            case base_node_type::empty:        return "empty";
         }
         return "unknown";
     }

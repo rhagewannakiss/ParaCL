@@ -322,13 +322,6 @@ public:
                         "Missing while body"));
         }
         validate_evaluable_node(*cond, "Invalid condition");
-        if(body->node_type() != base_node_type::scope &&
-                body->node_type() != base_node_type::expr) {
-            throw std::runtime_error(
-                    make_runtime_error(
-                        node.location(),
-                        "Invalid while body")); 
-        }
         cond->accept(*this);
         while (last_value_) {
             body->accept(*this);
@@ -358,12 +351,6 @@ public:
         }
 
         validate_evaluable_node(*cond, "Invalid condition");
-        if(body->node_type() != base_node_type::scope) {
-            throw std::runtime_error(
-                    make_runtime_error(
-                        node.location(),
-                        "Invalid for body")); 
-        }
 
         table_.enter_scope();
 
@@ -464,6 +451,13 @@ public:
                 node.location()); 
     }
 
+    void visit(ErrorNode& ndoe) override
+    {
+        throw std::runtime_error("Cannot execute error node");
+    }
+
+    void visit(EmptyNode& node) override {}
+
 private:
     void validate_evaluable_node(
             const BaseNode& node, 
@@ -478,6 +472,8 @@ private:
             case base_node_type::print:
             case base_node_type::if_node:
             case base_node_type::for_node:
+            case base_node_type::err:
+            case base_node_type::empty:
                 throw std::runtime_error(
                         make_runtime_error(node.location(), error_msg));
             case base_node_type::base:
