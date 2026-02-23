@@ -832,55 +832,17 @@ class InputNode : public BaseNode
 public:
     InputNode() : BaseNode(base_node_type::input) {}
 
-    explicit InputNode(NodePtr lhs)
-        : BaseNode(base_node_type::input)
-    {
-        if (lhs) {
-            set_lhs(std::move(lhs));
-        }
-    }
-
     InputNode(const InputNode& other) 
-        : BaseNode(other) 
-    {
-        if (other.lhs()) {
-            set_lhs(other.lhs()->clone());
-        }
-    }
+        : BaseNode(other) {}
 
     InputNode& operator=(const InputNode& other) {
         if(this == &other) return *this;
         BaseNode::operator=(other);
-        if (other.lhs()) {
-            set_lhs(other.lhs()->clone());
-        }
         return *this;
     }
 
     InputNode(InputNode&& other) noexcept = default;
     InputNode& operator=(InputNode&& other) noexcept = default;
-
-    void set_lhs(NodePtr lhs)
-    {
-        ensure_child_free(children().size() != 0, "lhs is already set");
-        add_child(std::move(lhs));
-    }
-
-    const BaseNode* lhs() const
-    {
-        if (children().size() > 0) {
-            return children()[0].get();
-        }
-        return nullptr;
-    }
-
-    BaseNode* lhs()
-    {
-        if (children().size() > 0) {
-            return children()[0].get();
-        }
-        return nullptr;
-    }
 
     void accept(Visitor& v) override;
     NodePtr clone() const override {

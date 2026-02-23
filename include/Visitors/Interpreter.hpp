@@ -322,7 +322,8 @@ public:
                         "Missing while body"));
         }
         validate_evaluable_node(*cond, "Invalid condition");
-        if(body->node_type() != base_node_type::scope) {
+        if(body->node_type() != base_node_type::scope &&
+                body->node_type() != base_node_type::expr) {
             throw std::runtime_error(
                     make_runtime_error(
                         node.location(),
@@ -384,21 +385,7 @@ public:
     
     void visit(InputNode& node) override
     {
-        auto* operand = node.lhs();
-        if (!operand) {
-            throw std::runtime_error(
-                    make_runtime_error(
-                        node.location(),
-                        "InputNode missing operand"));
-        }
         int64_t value = 0;
-        if(operand->node_type() != ast::base_node_type::var) {
-            throw std::runtime_error(
-                    make_runtime_error(
-                        node.location(),
-                        "InputNode lhs must be var"));
-        }
-        VarNode* var = static_cast<VarNode*>(operand);
         
         if (!(std::cin >> value)) {
             std::cin.clear();
@@ -406,10 +393,10 @@ public:
             throw std::runtime_error(
                     make_runtime_error(
                         node.location(),
-                        "Input error: expected integer"));
+                        "Input error: expected int64_t"));
         }
         
-        table_.assign_or_create(var->name(), value);
+        last_value_ = value;
     }
 
     void visit(ExprNode& node) override
@@ -445,6 +432,11 @@ public:
             table_.enter_scope();
         
         auto& stmts = node.statements();
+        
+        if (stmts.empty()) {
+            return; 
+        }
+        
         try {
             for(const auto& stmt : stmts) {
                 stmt->accept(*this);
