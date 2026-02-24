@@ -110,15 +110,34 @@ public:
         int64_t left_res = last_value_;
         right->accept(*this);
         int64_t right_res = last_value_;
+        int64_t checked_result = 0;
         switch (node.op()) {
             case bin_arith_op_type::add:
-                last_value_ = left_res + right_res;
+                if (add_overflow(left_res, right_res, checked_result)) {
+                    throw std::runtime_error(
+                            make_runtime_error(
+                                node.location(),
+                                "Integer overflow in addition"));
+                }
+                last_value_ = checked_result;
                 break;
             case bin_arith_op_type::sub:
-                last_value_ = left_res - right_res;
+                if (sub_overflow(left_res, right_res, checked_result)) {
+                    throw std::runtime_error(
+                            make_runtime_error(
+                                node.location(),
+                                "Integer overflow in subtraction"));
+                }
+                last_value_ = checked_result;
                 break;
             case bin_arith_op_type::mul:
-                last_value_ = left_res * right_res;
+                if (mul_overflow(left_res, right_res, checked_result)) {
+                    throw std::runtime_error(
+                            make_runtime_error(
+                                node.location(),
+                                "Integer overflow in multiplication"));
+                }
+                last_value_ = checked_result;
                 break;
             case bin_arith_op_type::div:
                 if(right_res == 0) {
@@ -126,6 +145,13 @@ public:
                             make_runtime_error(
                                 node.location(),
                                 "Division by zero"));
+                }
+                if (left_res == std::numeric_limits<int64_t>::min() &&
+                    right_res == -1) {
+                    throw std::runtime_error(
+                            make_runtime_error(
+                                node.location(),
+                                "Integer overflow in division"));
                 }
                 last_value_ = left_res / right_res;
                 break;
@@ -135,6 +161,13 @@ public:
                             make_runtime_error(
                                 node.location(),
                                 "Division by zero"));
+                }
+                if (left_res == std::numeric_limits<int64_t>::min() &&
+                    right_res == -1) {
+                    throw std::runtime_error(
+                            make_runtime_error(
+                                node.location(),
+                                "Integer overflow in modulus"));
                 }
                 last_value_ = left_res % right_res;
                 break;
@@ -233,7 +266,13 @@ public:
             case unop_node_type::pos:
                 break;
             case unop_node_type::neg:
-                last_value_ = last_value_ * (-1);
+                if (last_value_ == std::numeric_limits<int64_t>::min()) {
+                    throw std::runtime_error(
+                            make_runtime_error(
+                                node.location(),
+                                "Integer overflow in unary minus"));
+                }
+                last_value_ = -last_value_;
                 break;
             case unop_node_type::logical_not:
                 last_value_ = !last_value_;
@@ -476,6 +515,61 @@ public:
     void visit(EmptyNode&) override {}
 
 private:
+    static bool add_overflow(int64_t lhs, int64_t rhs, int64_t& out)
+    {
+        constexpr int64_t kMax = std::numeric_limits<int64_t>::max();
+        constexpr int64_t kMin = std::numeric_limits<int64_t>::min();
+        if ((rhs > 0 && lhs > kMax - rhs) ||
+            (rhs < 0 && lhs < kMin - rhs)) {
+            return true;
+        }
+        out = lhs + rhs;
+        return false;
+    }
+
+    static bool sub_overflow(int64_t lhs, int64_t rhs, int64_t& out)
+    {
+        constexpr int64_t kMax = std::numeric_limits<int64_t>::max();
+        constexpr int64_t kMin = std::numeric_limits<int64_t>::min();
+        if ((rhs < 0 && lhs > kMax + rhs) ||
+            (rhs > 0 && lhs < kMin + rhs)) {
+            return true;
+        }
+        out = lhs - rhs;
+        return false;
+    }
+
+    static bool mul_overflow(int64_t lhs, int64_t rhs, int64_t& out)
+    {
+        constexpr int64_t kMax = std::numeric_limits<int64_t>::max();
+        constexpr int64_t kMin = std::numeric_limits<int64_t>::min();
+
+        if (lhs == 0 || rhs == 0) {
+            out = 0;
+            return false;
+        }
+        if ((lhs == -1 && rhs == kMin) || (rhs == -1 && lhs == kMin)) {
+            return true;
+        }
+
+        if (lhs > 0) {
+            if (rhs > 0) {
+                if (lhs > kMax / rhs) return true;
+            } else {
+                if (rhs < kMin / lhs) return true;
+            }
+        } else {
+            if (rhs > 0) {
+                if (lhs < kMin / rhs) return true;
+            } else {
+                if (lhs < kMax / rhs) return true;
+            }
+        }
+
+        out = lhs * rhs;
+        return false;
+    }
+
     void validate_evaluable_node(
             const BaseNode& node, 
             const char* error_msg) const
