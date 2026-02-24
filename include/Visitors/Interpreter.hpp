@@ -349,17 +349,29 @@ public:
                         node.location(),
                         "Missing for body"));
         }
+        if (!init) {
+            throw std::runtime_error(
+                    make_runtime_error(
+                        node.location(),
+                        "Missing for init"));
+        }
+        if (!step) {
+            throw std::runtime_error(
+                    make_runtime_error(
+                        node.location(),
+                        "Missing for step"));
+        }
 
         validate_evaluable_node(*cond, "Invalid condition");
 
         table_.enter_scope();
 
         try {
-            if (init) init->accept(*this);
+            init->accept(*this);
             cond->accept(*this);
             while (last_value_) {
                 body->accept(*this);
-                if(step)step->accept(*this);
+                step->accept(*this);
                 cond->accept(*this);
             }
         } catch(...) {
@@ -421,6 +433,8 @@ public:
         auto& stmts = node.statements();
         
         if (stmts.empty()) {
+            if(need_scope)
+                table_.leave_scope(node.location());
             return; 
         }
         
@@ -451,12 +465,15 @@ public:
                 node.location()); 
     }
 
-    void visit(ErrorNode& ndoe) override
+    void visit(ErrorNode& node) override
     {
-        throw std::runtime_error("Cannot execute error node");
+        throw std::runtime_error(
+                make_runtime_error(
+                    node.location(),
+                    "Cannot execute error node"));
     }
 
-    void visit(EmptyNode& node) override {}
+    void visit(EmptyNode&) override {}
 
 private:
     void validate_evaluable_node(
@@ -467,7 +484,6 @@ private:
             case base_node_type::scope:
             case base_node_type::assign:
             case base_node_type::while_node:
-            case base_node_type::input:
             case base_node_type::var_decl:
             case base_node_type::print:
             case base_node_type::if_node:
@@ -486,6 +502,7 @@ private:
             case base_node_type::bin_logic_op:
             case base_node_type::value:
             case base_node_type::var:
+            case base_node_type::input:
             case base_node_type::expr:
                 return;
         }
