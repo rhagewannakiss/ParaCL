@@ -12,15 +12,18 @@ FLEX_TARGET(Lexer parser/grammar.l
 ADD_FLEX_BISON_DEPENDENCY(Lexer Parser)
 
 
-add_library(paracl_core INTERFACE)
+add_library(paracl_core
+    STATIC
+        interpeter/detail/VarTable.cpp
+)
 
 target_include_directories(paracl_core
-    INTERFACE
+    PUBLIC
         ${CMAKE_SOURCE_DIR}/include
 )
 
 target_link_libraries(paracl_core
-    INTERFACE
+    PUBLIC
         flags
 )
 
