@@ -1,4 +1,5 @@
 #include "Visitors/Interpreter.hpp"
+#include "Visitors/detail/ScopeGuard.hpp"
 
 #include <iostream>
 #include <limits>
@@ -284,23 +285,15 @@ void Interpreter::visit(ForNode& node)
     }
 
     validate_evaluable_node(*cond, "Invalid condition");
+    detail::ScopeGuard scope_guard(table_, node.location());
 
-    table_.enter_scope();
-
-    try {
-        init->accept(*this);
+    init->accept(*this);
+    cond->accept(*this);
+    while (last_value_) {
+        body->accept(*this);
+        step->accept(*this);
         cond->accept(*this);
-        while (last_value_) {
-            body->accept(*this);
-            step->accept(*this);
-            cond->accept(*this);
-        }
-    } catch (...) {
-        table_.leave_scope(node.location());
-        throw;
     }
-
-    table_.leave_scope(node.location());
 }
 
 void Interpreter::visit(InputNode& node)
@@ -341,32 +334,17 @@ void Interpreter::visit(PrintNode& node)
 
 void Interpreter::visit(ScopeNode& node)
 {
-    bool need_scope = node.parent() != nullptr;
+    const bool need_scope = node.parent() != nullptr;
     if (need_scope) {
-        table_.enter_scope();
-    }
-
-    auto& stmts = node.statements();
-    if (stmts.empty()) {
-        if (need_scope) {
-            table_.leave_scope(node.location());
+        detail::ScopeGuard scope_guard(table_, node.location());
+        for (const auto& stmt : node.statements()) {
+            stmt->accept(*this);
         }
         return;
     }
 
-    try {
-        for (const auto& stmt : stmts) {
-            stmt->accept(*this);
-        }
-    } catch (...) {
-        if (need_scope) {
-            table_.leave_scope(node.location());
-        }
-        throw;
-    }
-
-    if (need_scope) {
-        table_.leave_scope(node.location());
+    for (const auto& stmt : node.statements()) {
+        stmt->accept(*this);
     }
 }
 
