@@ -10,6 +10,7 @@
 %code requires
 {
 #include <algorithm>
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <vector>
@@ -67,7 +68,7 @@ parser::token_type yylex(parser::semantic_type* yylval,
     ERR
 ;
 
-%token <int> NUMBER
+%token <int64_t> NUMBER
 %token <std::string> VAR
 
 %nterm <std::unique_ptr<ast::BaseNode>> expr
@@ -137,12 +138,12 @@ stmt: expr SEMICOLON
     }
     | VAR SEMICOLON
     {
-        $$ = with_loc(std::make_unique<ast::VarDeclNode>($1, std::make_unique<ast::ValueNode>(0)), @$, driver);
+        $$ = with_loc(std::make_unique<ast::VarDeclNode>($1), @$, driver);
     }
     | VAR error
     {
         error(@2, "No semicolon");
-        $$ = with_loc(std::make_unique<ast::VarDeclNode>($1, std::make_unique<ast::ValueNode>(0)), @$, driver);
+        $$ = with_loc(std::make_unique<ast::VarDeclNode>($1), @$, driver);
     }
     | IF LEFT_PAREN expr RIGHT_PAREN stmt %prec XIF
     {
@@ -223,16 +224,6 @@ stmt: expr SEMICOLON
         error(@3, "Missing semicolon in print");
         $$ = with_loc(std::make_unique<ast::PrintNode>(std::make_unique<ast::ValueNode>(0)), @$, driver);
     }
-    | lvalue ASSIGNMENT QUESTION_MARK SEMICOLON
-    {
-        auto input = std::make_unique<ast::InputNode>(std::move($1));
-        $$ = with_loc(std::move(input), @$, driver);
-    }
-    | NEWLINE
-    {
-        driver->newline();
-        $$ = nullptr;
-    }
 ;
 
 lvalue: VAR
@@ -312,21 +303,19 @@ expr: expr PLUS expr
     }
     | expr DIV expr
     {
-        if ($3 == 0) {
-            error(@3, "Division by zero");
-            $$ = with_loc(std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::div, std::move($1), std::make_unique<ast::ValueNode>(0)), @$, driver);
-        } else {
-            $$ = with_loc(std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::div, std::move($1), std::move($3)), @$, driver);
-        }
+        $$ = with_loc(std::make_unique<ast::BinArithOpNode>(
+                ast::bin_arith_op_type::div,
+                std::move($1),
+                std::move($3)),
+            @$, driver);
     }
     | expr MODULUS expr
     {
-        if ($3 == 0) {
-            error(@3, "Division by zero");
-            $$ = with_loc(std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::div, std::move($1), std::make_unique<ast::ValueNode>(0)), @$, driver);
-        } else {
-            $$ = with_loc(std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::mod, std::move($1), std::move($3)), @$, driver);
-        }
+        $$ = with_loc(std::make_unique<ast::BinArithOpNode>(
+                ast::bin_arith_op_type::mod,
+                std::move($1),
+                std::move($3)),
+            @$, driver);
     }
     | expr EQUAL expr
     {
@@ -391,6 +380,10 @@ expr: expr PLUS expr
     | lvalue ASSIGNMENT expr
     {
         $$ = with_loc(std::make_unique<ast::AssignNode>(std::move($1), std::move($3)), @$, driver);
+    }
+    | QUESTION_MARK
+    {
+        $$ = with_loc(std::make_unique<ast::InputNode>(), @$, driver);
     }
 ;
 
