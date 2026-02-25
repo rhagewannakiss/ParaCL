@@ -1,0 +1,462 @@
+#include "Visitors/Interpreter.hpp"
+#include "Visitors/detail/ScopeGuard.hpp"
+
+#include <iostream>
+#include <limits>
+#include <stdexcept>
+#include <string>
+
+namespace {
+
+std::string make_runtime_error(const ast::SourceRange& loc,
+                               const std::string& message)
+{
+    const std::string location = loc.make_string();
+    if (location.empty()) {
+        return "error: " + message;
+    }
+    return location + ": error: " + message;
+}
+
+} // namespace
+
+namespace ast {
+
+Interpreter::Interpreter()
+  : last_value_(0)
+{
+}
+
+void Interpreter::visit(BinArithOpNode& node)
+{
+    auto* left = node.left();
+    auto* right = node.right();
+    if (!left || !right) {
+        throw std::runtime_error(make_runtime_error(
+            node.location(), "BinArithOpNode missing operand"));
+    }
+    left->accept(*this);
+    int64_t left_res = last_value_;
+    right->accept(*this);
+    int64_t right_res = last_value_;
+    int64_t checked_result = 0;
+    switch (node.op()) {
+        case bin_arith_op_type::add:
+            if (add_overflow(left_res, right_res, checked_result)) {
+                throw std::runtime_error(make_runtime_error(
+                    node.location(), "Integer overflow in addition"));
+            }
+            last_value_ = checked_result;
+            break;
+        case bin_arith_op_type::sub:
+            if (sub_overflow(left_res, right_res, checked_result)) {
+                throw std::runtime_error(make_runtime_error(
+                    node.location(), "Integer overflow in subtraction"));
+            }
+            last_value_ = checked_result;
+            break;
+        case bin_arith_op_type::mul:
+            if (mul_overflow(left_res, right_res, checked_result)) {
+                throw std::runtime_error(make_runtime_error(
+                    node.location(), "Integer overflow in multiplication"));
+            }
+            last_value_ = checked_result;
+            break;
+        case bin_arith_op_type::div:
+            if (right_res == 0) {
+                throw std::runtime_error(
+                    make_runtime_error(node.location(), "Division by zero"));
+            }
+            if (left_res == std::numeric_limits<int64_t>::min() &&
+                right_res == -1) {
+                throw std::runtime_error(make_runtime_error(
+                    node.location(), "Integer overflow in division"));
+            }
+            last_value_ = left_res / right_res;
+            break;
+        case ast::bin_arith_op_type::mod:
+            if (right_res == 0) {
+                throw std::runtime_error(
+                    make_runtime_error(node.location(), "Division by zero"));
+            }
+            if (left_res == std::numeric_limits<int64_t>::min() &&
+                right_res == -1) {
+                throw std::runtime_error(make_runtime_error(
+                    node.location(), "Integer overflow in modulus"));
+            }
+            last_value_ = left_res % right_res;
+            break;
+        default:
+            throw std::runtime_error(make_runtime_error(
+                node.location(), "Unknown binary arithmetic operator"));
+            break;
+    }
+}
+
+void Interpreter::visit(BinLogicOpNode& node)
+{
+    auto* left = node.left();
+    auto* right = node.right();
+
+    if (!left || !right) {
+        throw std::runtime_error(make_runtime_error(
+            node.location(), "BinLogicOpNode missing operand"));
+    }
+    left->accept(*this);
+    int64_t left_res = last_value_;
+    switch (node.op()) {
+        case bin_logic_op_type::greater:
+            right->accept(*this);
+            last_value_ = left_res > last_value_;
+            break;
+        case bin_logic_op_type::greater_equal:
+            right->accept(*this);
+            last_value_ = left_res >= last_value_;
+            break;
+        case bin_logic_op_type::less:
+            right->accept(*this);
+            last_value_ = left_res < last_value_;
+            break;
+        case bin_logic_op_type::less_equal:
+            right->accept(*this);
+            last_value_ = left_res <= last_value_;
+            break;
+        case bin_logic_op_type::equal:
+            right->accept(*this);
+            last_value_ = left_res == last_value_;
+            break;
+        case bin_logic_op_type::not_equal:
+            right->accept(*this);
+            last_value_ = left_res != last_value_;
+            break;
+        case bin_logic_op_type::logical_and:
+            if (left_res == 0) {
+                last_value_ = 0;
+                break;
+            }
+            right->accept(*this);
+            last_value_ = left_res && last_value_;
+            break;
+        case bin_logic_op_type::logical_or:
+            if (left_res != 0) {
+                last_value_ = 1;
+                break;
+            }
+            right->accept(*this);
+            last_value_ = left_res || last_value_;
+            break;
+        case bin_logic_op_type::bitwise_xor:
+            right->accept(*this);
+            last_value_ = left_res ^ last_value_;
+            break;
+        default:
+            throw std::runtime_error(make_runtime_error(
+                node.location(), "Unknown binary logical operator"));
+            break;
+    }
+}
+
+void Interpreter::visit(ValueNode& node)
+{
+    last_value_ = node.value();
+}
+
+void Interpreter::visit(UnOpNode& node)
+{
+    auto* operand = node.operand();
+    if (!operand) {
+        throw std::runtime_error(
+            make_runtime_error(node.location(), "UnOpNode missing operand"));
+    }
+    operand->accept(*this);
+    switch (node.op()) {
+        case unop_node_type::pos:
+            break;
+        case unop_node_type::neg:
+            if (last_value_ == std::numeric_limits<int64_t>::min()) {
+                throw std::runtime_error(make_runtime_error(
+                    node.location(), "Integer overflow in unary minus"));
+            }
+            last_value_ = -last_value_;
+            break;
+        case unop_node_type::logical_not:
+            last_value_ = !last_value_;
+            break;
+    }
+}
+
+void Interpreter::visit(AssignNode& node)
+{
+    auto* lhs = node.lhs();
+
+    if (lhs == nullptr) {
+        throw std::runtime_error(
+            make_runtime_error(node.location(), "AssignNode's lhs is nullptr"));
+    }
+    bool is_var = lhs->node_type() == base_node_type::var;
+    if (!is_var) {
+        throw std::runtime_error(
+            make_runtime_error(node.location(), "AssignNode lhs must be var"));
+    }
+    VarNode* var = static_cast<VarNode*>(lhs);
+
+    auto* operand = node.rhs();
+    if (!operand) {
+        throw std::runtime_error(
+            make_runtime_error(node.location(), "AssignNode missing operand"));
+    }
+
+    operand->accept(*this);
+    table_.assign_or_create(var->name(), last_value_);
+}
+
+void Interpreter::visit(VarNode& node)
+{
+    last_value_ = table_.lookup(node.name(), node.location());
+}
+
+void Interpreter::visit(IfNode& node)
+{
+    auto* cond = node.condition();
+    if (!cond) {
+        throw std::runtime_error(
+            make_runtime_error(node.location(), "Missing condition"));
+    }
+    validate_evaluable_node(*cond, "Invalid condition");
+    auto* then_branch = node.then_branch();
+    auto* else_branch = node.else_branch();
+
+    cond->accept(*this);
+    if (last_value_) {
+        if (then_branch == nullptr) {
+            throw std::runtime_error(
+                make_runtime_error(node.location(), "Missing then branch"));
+        }
+        then_branch->accept(*this);
+    } else if (else_branch) {
+        else_branch->accept(*this);
+    }
+}
+
+void Interpreter::visit(WhileNode& node)
+{
+    auto* cond = node.condition();
+    auto* body = node.body();
+
+    if (!cond) {
+        throw std::runtime_error(
+            make_runtime_error(node.location(), "Missing condition"));
+    }
+    if (!body) {
+        throw std::runtime_error(
+            make_runtime_error(node.location(), "Missing while body"));
+    }
+    validate_evaluable_node(*cond, "Invalid condition");
+    cond->accept(*this);
+    while (last_value_) {
+        body->accept(*this);
+        cond->accept(*this);
+    }
+}
+
+void Interpreter::visit(ForNode& node)
+{
+    auto* init = node.get_init();
+    auto* cond = node.get_cond();
+    auto* step = node.get_step();
+    auto* body = node.get_body();
+
+    if (!cond) {
+        throw std::runtime_error(
+            make_runtime_error(node.location(), "Missing condition"));
+    }
+
+    if (!body) {
+        throw std::runtime_error(
+            make_runtime_error(node.location(), "Missing for body"));
+    }
+    if (!init) {
+        throw std::runtime_error(
+            make_runtime_error(node.location(), "Missing for init"));
+    }
+    if (!step) {
+        throw std::runtime_error(
+            make_runtime_error(node.location(), "Missing for step"));
+    }
+
+    validate_evaluable_node(*cond, "Invalid condition");
+    detail::ScopeGuard scope_guard(table_, node.location());
+
+    init->accept(*this);
+    cond->accept(*this);
+    while (last_value_) {
+        body->accept(*this);
+        step->accept(*this);
+        cond->accept(*this);
+    }
+}
+
+void Interpreter::visit(InputNode& node)
+{
+    int64_t value = 0;
+
+    if (!(std::cin >> value)) {
+        std::cin.clear();
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        throw std::runtime_error(make_runtime_error(
+            node.location(), "Input error: expected int64_t"));
+    }
+
+    last_value_ = value;
+}
+
+void Interpreter::visit(ExprNode& node)
+{
+    if (!(node.expr())) {
+        throw std::runtime_error(
+            make_runtime_error(node.location(), "Expression is not valid"));
+    }
+    node.expr()->accept(*this);
+}
+
+void Interpreter::visit(PrintNode& node)
+{
+    auto* expr = node.expr();
+    if (!expr) {
+        throw std::runtime_error(make_runtime_error(
+            node.location(), "Missing expression for printing"));
+    }
+
+    validate_evaluable_node(*expr, "Invalid print expression");
+    expr->accept(*this);
+    std::cout << last_value_ << std::endl;
+}
+
+void Interpreter::visit(ScopeNode& node)
+{
+    const bool need_scope = node.parent() != nullptr;
+    if (need_scope) {
+        detail::ScopeGuard scope_guard(table_, node.location());
+        for (const auto& stmt : node.statements()) {
+            stmt->accept(*this);
+        }
+        return;
+    }
+
+    for (const auto& stmt : node.statements()) {
+        stmt->accept(*this);
+    }
+}
+
+void Interpreter::visit(VarDeclNode& node)
+{
+    const auto& init = node.init_expr();
+    if (init) {
+        init->accept(*this);
+    } else {
+        last_value_ = 0;
+    }
+    table_.declare_in_cur_scope(node.name(), last_value_, node.location());
+}
+
+void Interpreter::visit(ErrorNode& node)
+{
+    throw std::runtime_error(
+        make_runtime_error(node.location(), "Cannot execute error node"));
+}
+
+void Interpreter::visit(EmptyNode&)
+{
+}
+
+bool Interpreter::add_overflow(int64_t lhs, int64_t rhs, int64_t& out)
+{
+    constexpr int64_t kMax = std::numeric_limits<int64_t>::max();
+    constexpr int64_t kMin = std::numeric_limits<int64_t>::min();
+    if ((rhs > 0 && lhs > kMax - rhs) || (rhs < 0 && lhs < kMin - rhs)) {
+        return true;
+    }
+    out = lhs + rhs;
+    return false;
+}
+
+bool Interpreter::sub_overflow(int64_t lhs, int64_t rhs, int64_t& out)
+{
+    constexpr int64_t kMax = std::numeric_limits<int64_t>::max();
+    constexpr int64_t kMin = std::numeric_limits<int64_t>::min();
+    if ((rhs < 0 && lhs > kMax + rhs) || (rhs > 0 && lhs < kMin + rhs)) {
+        return true;
+    }
+    out = lhs - rhs;
+    return false;
+}
+
+bool Interpreter::mul_overflow(int64_t lhs, int64_t rhs, int64_t& out)
+{
+    constexpr int64_t kMax = std::numeric_limits<int64_t>::max();
+    constexpr int64_t kMin = std::numeric_limits<int64_t>::min();
+
+    if (lhs == 0 || rhs == 0) {
+        out = 0;
+        return false;
+    }
+    if ((lhs == -1 && rhs == kMin) || (rhs == -1 && lhs == kMin)) {
+        return true;
+    }
+
+    if (lhs > 0) {
+        if (rhs > 0) {
+            if (lhs > kMax / rhs) {
+                return true;
+            }
+        } else {
+            if (rhs < kMin / lhs) {
+                return true;
+            }
+        }
+    } else {
+        if (rhs > 0) {
+            if (lhs < kMin / rhs) {
+                return true;
+            }
+        } else {
+            if (lhs < kMax / rhs) {
+                return true;
+            }
+        }
+    }
+
+    out = lhs * rhs;
+    return false;
+}
+
+void Interpreter::validate_evaluable_node(const BaseNode& node,
+                                          const char* error_msg) const
+{
+    switch (node.node_type()) {
+        case base_node_type::scope:
+        case base_node_type::assign:
+        case base_node_type::while_node:
+        case base_node_type::var_decl:
+        case base_node_type::print:
+        case base_node_type::if_node:
+        case base_node_type::for_node:
+        case base_node_type::err:
+        case base_node_type::empty:
+            throw std::runtime_error(
+                make_runtime_error(node.location(), error_msg));
+        case base_node_type::base:
+            throw std::runtime_error(make_runtime_error(
+                node.location(), "you cannot use abstract class"));
+        case base_node_type::bin_arith_op:
+        case base_node_type::unop:
+        case base_node_type::bin_logic_op:
+        case base_node_type::value:
+        case base_node_type::var:
+        case base_node_type::input:
+        case base_node_type::expr:
+            return;
+    }
+}
+
+} // namespace ast
