@@ -54,6 +54,10 @@ private:
     static bool add_overflow(int64_t lhs, int64_t rhs, int64_t& out);
     static bool sub_overflow(int64_t lhs, int64_t rhs, int64_t& out);
     static bool mul_overflow(int64_t lhs, int64_t rhs, int64_t& out);
+    bool is_active_loop_condition_input(const InputNode& node) const;
+    std::optional<int64_t> try_get_cached_loop_input(
+        const InputNode& node) const;
+    void cache_loop_input(const InputNode& node, int64_t value);
     void evaluate_loop_condition(
         BaseNode& condition,
         const std::optional<std::string>& tracked_var_name,

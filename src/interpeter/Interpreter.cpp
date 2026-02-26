@@ -63,6 +63,18 @@ void collect_input_nodes(
     }
 }
 
+int64_t read_input_int64_or_throw(const ast::SourceRange& location)
+{
+    int64_t value = 0;
+    if (!(std::cin >> value)) {
+        std::cin.clear();
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        throw std::runtime_error(
+            make_runtime_error(location, "Input error: expected int64_t"));
+    }
+    return value;
+}
+
 } // namespace
 
 namespace ast {
@@ -353,40 +365,19 @@ void Interpreter::visit(ForNode& node)
 
 void Interpreter::visit(InputNode& node)
 {
-    if (!loop_input_nodes_stack_.empty()) {
-        const auto& loop_input_nodes = loop_input_nodes_stack_.back();
-        if (loop_input_nodes.find(&node) != loop_input_nodes.end()) {
-            auto& loop_input_cache = loop_input_cache_stack_.back();
-            auto cached = loop_input_cache.find(&node);
-            if (cached != loop_input_cache.end()) {
-                last_value_ = cached->second;
-                return;
-            }
-
-            int64_t value = 0;
-            if (!(std::cin >> value)) {
-                std::cin.clear();
-                std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-                throw std::runtime_error(make_runtime_error(
-                    node.location(), "Input error: expected int64_t"));
-            }
-
-            loop_input_cache.emplace(&node, value);
-            last_value_ = value;
+    if (is_active_loop_condition_input(node)) {
+        if (const auto cached_value = try_get_cached_loop_input(node)) {
+            last_value_ = *cached_value;
             return;
         }
+
+        const int64_t value = read_input_int64_or_throw(node.location());
+        cache_loop_input(node, value);
+        last_value_ = value;
+        return;
     }
 
-    int64_t value = 0;
-
-    if (!(std::cin >> value)) {
-        std::cin.clear();
-        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
-        throw std::runtime_error(make_runtime_error(
-            node.location(), "Input error: expected int64_t"));
-    }
-
-    last_value_ = value;
+    last_value_ = read_input_int64_or_throw(node.location());
 }
 
 void Interpreter::visit(ExprNode& node)
@@ -507,6 +498,41 @@ bool Interpreter::mul_overflow(int64_t lhs, int64_t rhs, int64_t& out)
 
     out = lhs * rhs;
     return false;
+}
+
+bool Interpreter::is_active_loop_condition_input(const InputNode& node) const
+{
+    if (loop_input_nodes_stack_.empty()) {
+        return false;
+    }
+
+    const auto& loop_input_nodes = loop_input_nodes_stack_.back();
+    return loop_input_nodes.find(&node) != loop_input_nodes.end();
+}
+
+std::optional<int64_t> Interpreter::try_get_cached_loop_input(
+    const InputNode& node) const
+{
+    if (!is_active_loop_condition_input(node) || loop_input_cache_stack_.empty()) {
+        return std::nullopt;
+    }
+
+    const auto& loop_input_cache = loop_input_cache_stack_.back();
+    const auto cached = loop_input_cache.find(&node);
+    if (cached == loop_input_cache.end()) {
+        return std::nullopt;
+    }
+    return cached->second;
+}
+
+void Interpreter::cache_loop_input(const InputNode& node, int64_t value)
+{
+    if (!is_active_loop_condition_input(node) || loop_input_cache_stack_.empty()) {
+        return;
+    }
+
+    auto& loop_input_cache = loop_input_cache_stack_.back();
+    loop_input_cache.insert_or_assign(&node, value);
 }
 
 void Interpreter::with_loop_input_context(const BaseNode& condition_root,
