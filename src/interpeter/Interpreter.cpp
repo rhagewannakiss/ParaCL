@@ -40,6 +40,16 @@ inline bool is_missing_or_empty_stmt_node(const ast::BaseNode* node)
     return is_missing_node(node) || is_empty_node(node);
 }
 
+inline bool has_expr_node(const ast::BaseNode* node)
+{
+    return !is_missing_or_empty_expr_node(node);
+}
+
+inline bool has_stmt_node(const ast::BaseNode* node)
+{
+    return !is_missing_or_empty_stmt_node(node);
+}
+
 void require_expr_node(const ast::BaseNode* node,
                        const ast::SourceRange& owner_loc,
                        const char* error_msg)
@@ -55,6 +65,13 @@ void require_stmt_node(const ast::BaseNode* node,
 {
     if (is_missing_or_empty_stmt_node(node)) {
         throw std::runtime_error(make_runtime_error(owner_loc, error_msg));
+    }
+}
+
+void accept_stmt_if_present(ast::BaseNode* node, ast::Visitor& visitor)
+{
+    if (has_stmt_node(node)) {
+        node->accept(visitor);
     }
 }
 
@@ -106,11 +123,9 @@ void Interpreter::visit(BinArithOpNode& node)
 {
     auto* left = node.left();
     auto* right = node.right();
-    if (is_missing_or_empty_expr_node(left) ||
-        is_missing_or_empty_expr_node(right)) {
-        throw std::runtime_error(make_runtime_error(
-            node.location(), "BinArithOpNode missing operand"));
-    }
+    require_expr_node(left, node.location(), "BinArithOpNode missing operand");
+    require_expr_node(right, node.location(), "BinArithOpNode missing operand");
+
     left->accept(*this);
     int64_t left_res = last_value_;
     right->accept(*this);
@@ -174,11 +189,9 @@ void Interpreter::visit(BinLogicOpNode& node)
     auto* left = node.left();
     auto* right = node.right();
 
-    if (is_missing_or_empty_expr_node(left) ||
-        is_missing_or_empty_expr_node(right)) {
-        throw std::runtime_error(make_runtime_error(
-            node.location(), "BinLogicOpNode missing operand"));
-    }
+    require_expr_node(left, node.location(), "BinLogicOpNode missing operand");
+    require_expr_node(right, node.location(), "BinLogicOpNode missing operand");
+
     left->accept(*this);
     int64_t left_res = last_value_;
     switch (node.op()) {
@@ -241,10 +254,8 @@ void Interpreter::visit(ValueNode& node)
 void Interpreter::visit(UnOpNode& node)
 {
     auto* operand = node.operand();
-    if (is_missing_or_empty_expr_node(operand)) {
-        throw std::runtime_error(
-            make_runtime_error(node.location(), "UnOpNode missing operand"));
-    }
+    require_expr_node(operand, node.location(), "UnOpNode missing operand");
+
     operand->accept(*this);
     switch (node.op()) {
         case unop_node_type::pos:
@@ -266,10 +277,8 @@ void Interpreter::visit(AssignNode& node)
 {
     auto* lhs = node.lhs();
 
-    if (is_missing_or_empty_expr_node(lhs)) {
-        throw std::runtime_error(
-            make_runtime_error(node.location(), "AssignNode's lhs is missing"));
-    }
+    require_expr_node(lhs, node.location(), "AssignNode's lhs is missing");
+
     bool is_var = lhs->node_type() == base_node_type::var;
     if (!is_var) {
         throw std::runtime_error(
@@ -278,10 +287,7 @@ void Interpreter::visit(AssignNode& node)
     VarNode* var = static_cast<VarNode*>(lhs);
 
     auto* operand = node.rhs();
-    if (is_missing_or_empty_expr_node(operand)) {
-        throw std::runtime_error(
-            make_runtime_error(node.location(), "AssignNode missing operand"));
-    }
+    require_expr_node(operand, node.location(), "AssignNode missing operand");
 
     operand->accept(*this);
     table_.assign_or_create(var->name(), last_value_);
@@ -307,8 +313,8 @@ void Interpreter::visit(IfNode& node)
     if (last_value_) {
         require_stmt_node(then_branch, node.location(), "Missing then branch");
         then_branch->accept(*this);
-    } else if (!is_missing_or_empty_stmt_node(else_branch)) {
-        else_branch->accept(*this);
+    } else {
+        accept_stmt_if_present(else_branch, *this);
     }
 }
 
@@ -345,8 +351,7 @@ void Interpreter::visit(ForNode& node)
 
     detail::ScopeGuard scope_guard(table_, node.location());
 
-    if (!is_missing_or_empty_stmt_node(init))
-        init->accept(*this);
+    accept_stmt_if_present(init, *this);
 
     with_loop_input_context(*cond, [&]() {
         const auto cond_var_name = validate_evaluable_node(
@@ -355,8 +360,7 @@ void Interpreter::visit(ForNode& node)
 
         while (last_value_) {
             body->accept(*this);
-            if (!is_missing_or_empty_stmt_node(step))
-                step->accept(*this);
+            accept_stmt_if_present(step, *this);
             evaluate_loop_condition(*cond, cond_var_name, false);
         }
     });
@@ -381,20 +385,15 @@ void Interpreter::visit(InputNode& node)
 
 void Interpreter::visit(ExprNode& node)
 {
-    if (is_missing_or_empty_expr_node(node.expr())) {
-        throw std::runtime_error(
-            make_runtime_error(node.location(), "Expression is not valid"));
-    }
-    node.expr()->accept(*this);
+    auto* expr = node.expr();
+    require_expr_node(expr, node.location(), "Expression is not valid");
+    expr->accept(*this);
 }
 
 void Interpreter::visit(PrintNode& node)
 {
     auto* expr = node.expr();
-    if (is_missing_or_empty_expr_node(expr)) {
-        throw std::runtime_error(make_runtime_error(
-            node.location(), "Missing expression for printing"));
-    }
+    require_expr_node(expr, node.location(), "Missing expression for printing");
 
     validate_evaluable_node(*expr, "Invalid print expression");
     expr->accept(*this);
@@ -420,7 +419,7 @@ void Interpreter::visit(ScopeNode& node)
 void Interpreter::visit(VarDeclNode& node)
 {
     const auto& init = node.init_expr();
-    if (!is_missing_or_empty_expr_node(init)) {
+    if (has_expr_node(init)) {
         init->accept(*this);
     } else {
         last_value_ = 0;
