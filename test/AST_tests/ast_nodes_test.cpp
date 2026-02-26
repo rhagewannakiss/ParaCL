@@ -43,11 +43,10 @@ TEST(BaseSmokeTest, ExprNodeTest) {
 }
 
 TEST(BaseSmokeTest, InputNodeTest) {
-    auto var = std::make_unique<ast::VarNode>("var");
-    ast::InputNode i(std::move(var));
+    ast::InputNode i;
 
     EXPECT_EQ(i.node_type(), ast::base_node_type::input);
-    EXPECT_EQ(i.lhs()->node_type(), ast::base_node_type::var);
+    EXPECT_TRUE(i.children().empty());
 }
 
 TEST(BaseSmokeTest, AssignNodeTest) {

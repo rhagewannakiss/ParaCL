@@ -11,7 +11,7 @@ An educational programming C-like language, implemented as an interpreter. The p
 - Variable assignment
 - Input: `?` reads an integer from keyboard
 - Output: `print <int64_t>`
-- Cycles: `if`/`else`, `while`, 'for'
+- Cycles: `if`/`else`, `while`, `for`
 - Scope blocks `{ ... }`
 - Comments `// ...`
 

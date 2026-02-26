@@ -116,7 +116,7 @@ bool check_node_equality_val(const ast::BaseNode* node1,
                 auto* va = dynamic_cast<const ast::InputNode*>(node1);
                 auto* vb = dynamic_cast<const ast::InputNode*>(node2);
                 if (!va || !vb) return false;
-                return check_node_equality_val(va->lhs(), vb->lhs());
+                return va->children().empty() && vb->children().empty();
             }
         case ast::base_node_type::scope:
             {

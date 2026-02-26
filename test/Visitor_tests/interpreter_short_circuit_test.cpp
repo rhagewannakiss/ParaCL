@@ -17,13 +17,28 @@ std::string RunAndCapture(ast::BaseNode& node) {
     std::cout.rdbuf(old);
     return out.str();
 }
+
+class ScopedCinInput {
+public:
+    explicit ScopedCinInput(const std::string& input)
+      : in_(input), old_(std::cin.rdbuf(in_.rdbuf())) {}
+    ~ScopedCinInput() { std::cin.rdbuf(old_); }
+
+    ScopedCinInput(const ScopedCinInput&) = delete;
+    ScopedCinInput& operator=(const ScopedCinInput&) = delete;
+
+private:
+    std::istringstream in_;
+    std::streambuf* old_;
+};
 } // namespace
 
 TEST(InterpreterShortCircuitTest, LogicalAndSkipsRightWhenLeftIsZero) {
+    ScopedCinInput input("abc\n");
     ast::PrintNode node(std::make_unique<ast::BinLogicOpNode>(
         ast::bin_logic_op_type::logical_and,
         std::make_unique<ast::ValueNode>(0),
-        std::make_unique<ast::InputNode>(std::make_unique<ast::ValueNode>(1))
+        std::make_unique<ast::InputNode>()
     ));
 
     EXPECT_NO_THROW({
@@ -33,10 +48,11 @@ TEST(InterpreterShortCircuitTest, LogicalAndSkipsRightWhenLeftIsZero) {
 }
 
 TEST(InterpreterShortCircuitTest, LogicalOrSkipsRightWhenLeftIsNonZero) {
+    ScopedCinInput input("abc\n");
     ast::PrintNode node(std::make_unique<ast::BinLogicOpNode>(
         ast::bin_logic_op_type::logical_or,
         std::make_unique<ast::ValueNode>(1),
-        std::make_unique<ast::InputNode>(std::make_unique<ast::ValueNode>(1))
+        std::make_unique<ast::InputNode>()
     ));
 
     EXPECT_NO_THROW({
@@ -46,28 +62,31 @@ TEST(InterpreterShortCircuitTest, LogicalOrSkipsRightWhenLeftIsNonZero) {
 }
 
 TEST(InterpreterShortCircuitTest, LogicalAndEvaluatesRightWhenLeftIsNonZero) {
+    ScopedCinInput input("abc\n");
     ast::Interpreter interpreter;
     ast::PrintNode node(std::make_unique<ast::BinLogicOpNode>(
         ast::bin_logic_op_type::logical_and,
         std::make_unique<ast::ValueNode>(1),
-        std::make_unique<ast::InputNode>(std::make_unique<ast::ValueNode>(1))
+        std::make_unique<ast::InputNode>()
     ));
 
     EXPECT_THROW(node.accept(interpreter), std::runtime_error);
 }
 
 TEST(InterpreterShortCircuitTest, LogicalOrEvaluatesRightWhenLeftIsZero) {
+    ScopedCinInput input("abc\n");
     ast::Interpreter interpreter;
     ast::PrintNode node(std::make_unique<ast::BinLogicOpNode>(
         ast::bin_logic_op_type::logical_or,
         std::make_unique<ast::ValueNode>(0),
-        std::make_unique<ast::InputNode>(std::make_unique<ast::ValueNode>(1))
+        std::make_unique<ast::InputNode>()
     ));
 
     EXPECT_THROW(node.accept(interpreter), std::runtime_error);
 }
 
 TEST(InterpreterShortCircuitTest, ForConditionLogicalAndSkipsRightOperand) {
+    ScopedCinInput input("abc\n");
     ast::ScopeNode root;
     root.add_statement(std::make_unique<ast::VarDeclNode>(
         "x",
@@ -80,8 +99,7 @@ TEST(InterpreterShortCircuitTest, ForConditionLogicalAndSkipsRightOperand) {
         std::make_unique<ast::BinLogicOpNode>(
             ast::bin_logic_op_type::logical_and,
             std::make_unique<ast::ValueNode>(0),
-            std::make_unique<ast::InputNode>(
-                std::make_unique<ast::ValueNode>(1))),
+            std::make_unique<ast::InputNode>()),
         std::make_unique<ast::AssignNode>(
             std::make_unique<ast::VarNode>("x"),
             std::make_unique<ast::BinArithOpNode>(

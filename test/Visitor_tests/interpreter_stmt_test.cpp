@@ -107,8 +107,9 @@ TEST(InterpreterStmtTest, InputNodeReadsIntegerTest) {
 
     ast::ScopeNode root;
     root.add_statement(std::make_unique<ast::VarDeclNode>("x"));
-    root.add_statement(std::make_unique<ast::InputNode>(
-        std::make_unique<ast::VarNode>("x")));
+    root.add_statement(std::make_unique<ast::AssignNode>(
+        std::make_unique<ast::VarNode>("x"),
+        std::make_unique<ast::InputNode>()));
     root.add_statement(std::make_unique<ast::PrintNode>(
         std::make_unique<ast::VarNode>("x")));
 
@@ -119,7 +120,7 @@ TEST(InterpreterStmtTest, InputNodeInvalidInputThrows) {
     ScopedCinInput input("abc\n");
 
     ast::Interpreter interpreter;
-    ast::InputNode node(std::make_unique<ast::VarNode>("x"));
+    ast::InputNode node;
     EXPECT_THROW(node.accept(interpreter), std::runtime_error);
 }
 
