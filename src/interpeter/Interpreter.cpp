@@ -1,8 +1,10 @@
 #include "Visitors/Interpreter.hpp"
+#include "AST/AST.hpp"
 #include "Visitors/detail/ScopeGuard.hpp"
 
 #include <iostream>
 #include <limits>
+#include <optional>
 #include <stdexcept>
 #include <string>
 
@@ -18,6 +20,49 @@ std::string make_runtime_error(const ast::SourceRange& loc,
     return location + ": error: " + message;
 }
 
+inline bool is_missing_node(const ast::BaseNode* node)
+{
+    return node == nullptr;
+}
+
+inline bool is_empty_node(const ast::BaseNode* node)
+{
+    return node != nullptr && node->node_type() == ast::base_node_type::empty;
+}
+
+inline bool is_missing_or_empty_expr_node(const ast::BaseNode* node)
+{
+    return is_missing_node(node) || is_empty_node(node);
+}
+
+inline bool is_missing_or_empty_stmt_node(const ast::BaseNode* node)
+{
+    return is_missing_node(node) || is_empty_node(node);
+}
+
+void collect_input_nodes(
+    const ast::BaseNode* node,
+    std::unordered_set<const ast::InputNode*>& out)
+{
+    if (is_missing_node(node) || is_empty_node(node)) {
+        return;
+    }
+
+    if (node->node_type() == ast::base_node_type::input) {
+        const auto* input = dynamic_cast<const ast::InputNode*>(node);
+        if (!input) {
+            throw std::runtime_error(make_runtime_error(
+                node->location(), "Invalid InputNode in condition"));
+        }
+        out.insert(input);
+        return;
+    }
+
+    for (const auto& child : node->children()) {
+        collect_input_nodes(child.get(), out);
+    }
+}
+
 } // namespace
 
 namespace ast {
@@ -31,7 +76,8 @@ void Interpreter::visit(BinArithOpNode& node)
 {
     auto* left = node.left();
     auto* right = node.right();
-    if (!left || !right) {
+    if (is_missing_or_empty_expr_node(left) ||
+        is_missing_or_empty_expr_node(right)) {
         throw std::runtime_error(make_runtime_error(
             node.location(), "BinArithOpNode missing operand"));
     }
@@ -98,7 +144,8 @@ void Interpreter::visit(BinLogicOpNode& node)
     auto* left = node.left();
     auto* right = node.right();
 
-    if (!left || !right) {
+    if (is_missing_or_empty_expr_node(left) ||
+        is_missing_or_empty_expr_node(right)) {
         throw std::runtime_error(make_runtime_error(
             node.location(), "BinLogicOpNode missing operand"));
     }
@@ -164,7 +211,7 @@ void Interpreter::visit(ValueNode& node)
 void Interpreter::visit(UnOpNode& node)
 {
     auto* operand = node.operand();
-    if (!operand) {
+    if (is_missing_or_empty_expr_node(operand)) {
         throw std::runtime_error(
             make_runtime_error(node.location(), "UnOpNode missing operand"));
     }
@@ -189,9 +236,9 @@ void Interpreter::visit(AssignNode& node)
 {
     auto* lhs = node.lhs();
 
-    if (lhs == nullptr) {
+    if (is_missing_or_empty_expr_node(lhs)) {
         throw std::runtime_error(
-            make_runtime_error(node.location(), "AssignNode's lhs is nullptr"));
+            make_runtime_error(node.location(), "AssignNode's lhs is missing"));
     }
     bool is_var = lhs->node_type() == base_node_type::var;
     if (!is_var) {
@@ -201,7 +248,7 @@ void Interpreter::visit(AssignNode& node)
     VarNode* var = static_cast<VarNode*>(lhs);
 
     auto* operand = node.rhs();
-    if (!operand) {
+    if (is_missing_or_empty_expr_node(operand)) {
         throw std::runtime_error(
             make_runtime_error(node.location(), "AssignNode missing operand"));
     }
@@ -218,22 +265,25 @@ void Interpreter::visit(VarNode& node)
 void Interpreter::visit(IfNode& node)
 {
     auto* cond = node.condition();
-    if (!cond) {
+    if (is_missing_or_empty_expr_node(cond)) {
         throw std::runtime_error(
             make_runtime_error(node.location(), "Missing condition"));
     }
-    validate_evaluable_node(*cond, "Invalid condition");
     auto* then_branch = node.then_branch();
     auto* else_branch = node.else_branch();
 
+    detail::ScopeGuard scope_guard(table_, node.location());
+    validate_evaluable_node(*cond,
+                            "Invalid condition",
+                            evaluable_context::condition);
     cond->accept(*this);
     if (last_value_) {
-        if (then_branch == nullptr) {
+        if (is_missing_or_empty_stmt_node(then_branch)) {
             throw std::runtime_error(
                 make_runtime_error(node.location(), "Missing then branch"));
         }
         then_branch->accept(*this);
-    } else if (else_branch) {
+    } else if (!is_missing_or_empty_stmt_node(else_branch)) {
         else_branch->accept(*this);
     }
 }
@@ -243,20 +293,42 @@ void Interpreter::visit(WhileNode& node)
     auto* cond = node.condition();
     auto* body = node.body();
 
-    if (!cond) {
+    if (is_missing_or_empty_expr_node(cond)) {
         throw std::runtime_error(
             make_runtime_error(node.location(), "Missing condition"));
     }
-    if (!body) {
+    if (is_missing_or_empty_stmt_node(body)) {
         throw std::runtime_error(
             make_runtime_error(node.location(), "Missing while body"));
     }
-    validate_evaluable_node(*cond, "Invalid condition");
-    cond->accept(*this);
-    while (last_value_) {
-        body->accept(*this);
-        cond->accept(*this);
+
+    detail::ScopeGuard scope_guard(table_, node.location());
+    push_loop_input_context(*cond);
+
+    try {
+        const auto cond_var_name = validate_evaluable_node(
+            *cond, "Invalid condition", evaluable_context::condition);
+        if (cond_var_name) {
+            cond->accept(*this); // one-time initialization in condition
+            last_value_ = table_.lookup(*cond_var_name, cond->location());
+        } else {
+            cond->accept(*this);
+        }
+
+        while (last_value_) {
+            body->accept(*this);
+            if (cond_var_name) {
+                last_value_ = table_.lookup(*cond_var_name, cond->location());
+            } else {
+                cond->accept(*this);
+            }
+        }
+    } catch (...) {
+        pop_loop_input_context();
+        throw;
     }
+
+    pop_loop_input_context();
 }
 
 void Interpreter::visit(ForNode& node)
@@ -266,38 +338,77 @@ void Interpreter::visit(ForNode& node)
     auto* step = node.get_step();
     auto* body = node.get_body();
 
-    if (!cond) {
+    if (is_missing_or_empty_expr_node(cond)) {
         throw std::runtime_error(
             make_runtime_error(node.location(), "Missing condition"));
     }
 
-    if (!body) {
+    if (is_missing_or_empty_stmt_node(body)) {
         throw std::runtime_error(
             make_runtime_error(node.location(), "Missing for body"));
     }
-    if (!init) {
-        throw std::runtime_error(
-            make_runtime_error(node.location(), "Missing for init"));
-    }
-    if (!step) {
-        throw std::runtime_error(
-            make_runtime_error(node.location(), "Missing for step"));
-    }
 
-    validate_evaluable_node(*cond, "Invalid condition");
     detail::ScopeGuard scope_guard(table_, node.location());
 
-    init->accept(*this);
-    cond->accept(*this);
-    while (last_value_) {
-        body->accept(*this);
-        step->accept(*this);
-        cond->accept(*this);
+    if (!is_missing_or_empty_stmt_node(init))
+        init->accept(*this);
+
+    push_loop_input_context(*cond);
+
+    try {
+        const auto cond_var_name = validate_evaluable_node(
+            *cond, "Invalid condition", evaluable_context::condition);
+        if (cond_var_name) {
+            cond->accept(*this); // one-time initialization in condition
+            last_value_ = table_.lookup(*cond_var_name, cond->location());
+        } else {
+            cond->accept(*this);
+        }
+
+        while (last_value_) {
+            body->accept(*this);
+            if (!is_missing_or_empty_stmt_node(step))
+                step->accept(*this);
+            if (cond_var_name) {
+                last_value_ = table_.lookup(*cond_var_name, cond->location());
+            } else {
+                cond->accept(*this);
+            }
+        }
+    } catch (...) {
+        pop_loop_input_context();
+        throw;
     }
+
+    pop_loop_input_context();
 }
 
 void Interpreter::visit(InputNode& node)
 {
+    if (!loop_input_nodes_stack_.empty()) {
+        const auto& loop_input_nodes = loop_input_nodes_stack_.back();
+        if (loop_input_nodes.find(&node) != loop_input_nodes.end()) {
+            auto& loop_input_cache = loop_input_cache_stack_.back();
+            auto cached = loop_input_cache.find(&node);
+            if (cached != loop_input_cache.end()) {
+                last_value_ = cached->second;
+                return;
+            }
+
+            int64_t value = 0;
+            if (!(std::cin >> value)) {
+                std::cin.clear();
+                std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+                throw std::runtime_error(make_runtime_error(
+                    node.location(), "Input error: expected int64_t"));
+            }
+
+            loop_input_cache.emplace(&node, value);
+            last_value_ = value;
+            return;
+        }
+    }
+
     int64_t value = 0;
 
     if (!(std::cin >> value)) {
@@ -312,7 +423,7 @@ void Interpreter::visit(InputNode& node)
 
 void Interpreter::visit(ExprNode& node)
 {
-    if (!(node.expr())) {
+    if (is_missing_or_empty_expr_node(node.expr())) {
         throw std::runtime_error(
             make_runtime_error(node.location(), "Expression is not valid"));
     }
@@ -322,7 +433,7 @@ void Interpreter::visit(ExprNode& node)
 void Interpreter::visit(PrintNode& node)
 {
     auto* expr = node.expr();
-    if (!expr) {
+    if (is_missing_or_empty_expr_node(expr)) {
         throw std::runtime_error(make_runtime_error(
             node.location(), "Missing expression for printing"));
     }
@@ -351,7 +462,7 @@ void Interpreter::visit(ScopeNode& node)
 void Interpreter::visit(VarDeclNode& node)
 {
     const auto& init = node.init_expr();
-    if (init) {
+    if (!is_missing_or_empty_expr_node(init)) {
         init->accept(*this);
     } else {
         last_value_ = 0;
@@ -430,14 +541,65 @@ bool Interpreter::mul_overflow(int64_t lhs, int64_t rhs, int64_t& out)
     return false;
 }
 
-void Interpreter::validate_evaluable_node(const BaseNode& node,
-                                          const char* error_msg) const
+void Interpreter::push_loop_input_context(const BaseNode& condition_root)
 {
+    LoopInputNodes input_nodes;
+    collect_input_nodes(&condition_root, input_nodes);
+    loop_input_nodes_stack_.push_back(std::move(input_nodes));
+    loop_input_cache_stack_.emplace_back();
+}
+
+void Interpreter::pop_loop_input_context()
+{
+    if (!loop_input_nodes_stack_.empty()) {
+        loop_input_nodes_stack_.pop_back();
+    }
+    if (!loop_input_cache_stack_.empty()) {
+        loop_input_cache_stack_.pop_back();
+    }
+}
+
+std::optional<std::string> Interpreter::validate_evaluable_node(
+    const BaseNode& node,
+    const char* error_msg,
+    evaluable_context context) const
+{
+    if (node.node_type() == base_node_type::assign) {
+        if (context != evaluable_context::condition) {
+            throw std::runtime_error(
+                make_runtime_error(node.location(), error_msg));
+        }
+
+        const auto* assign = dynamic_cast<const AssignNode*>(&node);
+        if (!assign || is_missing_or_empty_expr_node(assign->lhs())) {
+            throw std::runtime_error(make_runtime_error(
+                node.location(), "AssignNode condition missing lhs"));
+        }
+        if (assign->lhs()->node_type() != base_node_type::var) {
+            throw std::runtime_error(make_runtime_error(
+                node.location(), "AssignNode condition lhs must be var"));
+        }
+        const auto* var = static_cast<const VarNode*>(assign->lhs());
+        return var->name();
+    }
+
+    if (node.node_type() == base_node_type::var_decl) {
+        if (context != evaluable_context::condition) {
+            throw std::runtime_error(
+                make_runtime_error(node.location(), error_msg));
+        }
+
+        const auto* decl = dynamic_cast<const VarDeclNode*>(&node);
+        if (!decl) {
+            throw std::runtime_error(make_runtime_error(
+                node.location(), "Invalid VarDeclNode condition"));
+        }
+        return decl->name();
+    }
+
     switch (node.node_type()) {
         case base_node_type::scope:
-        case base_node_type::assign:
         case base_node_type::while_node:
-        case base_node_type::var_decl:
         case base_node_type::print:
         case base_node_type::if_node:
         case base_node_type::for_node:
@@ -448,6 +610,8 @@ void Interpreter::validate_evaluable_node(const BaseNode& node,
         case base_node_type::base:
             throw std::runtime_error(make_runtime_error(
                 node.location(), "you cannot use abstract class"));
+        case base_node_type::assign:
+        case base_node_type::var_decl:
         case base_node_type::bin_arith_op:
         case base_node_type::unop:
         case base_node_type::bin_logic_op:
@@ -455,8 +619,10 @@ void Interpreter::validate_evaluable_node(const BaseNode& node,
         case base_node_type::var:
         case base_node_type::input:
         case base_node_type::expr:
-            return;
+            return std::nullopt;
     }
+
+    return std::nullopt;
 }
 
 } // namespace ast
