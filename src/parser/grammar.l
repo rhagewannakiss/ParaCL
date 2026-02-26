@@ -16,7 +16,7 @@ NUMBER            [0-9]+
 
 %%
 
-{NLINE}             { return yy::parser::token_type::NEWLINE;}
+{NLINE}             {/* skip newlines */}
 "//".*              {/* skip comments */}
 {WS}                {/* skip whitespace */}
 "+"                 { return yy::parser::token_type::PLUS; }
