@@ -306,20 +306,11 @@ void Interpreter::visit(WhileNode& node)
     with_loop_input_context(*cond, [&]() {
         const auto cond_var_name = validate_evaluable_node(
             *cond, "Invalid condition", evaluable_context::condition);
-        if (cond_var_name) {
-            cond->accept(*this); // one-time initialization in condition
-            last_value_ = table_.lookup(*cond_var_name, cond->location());
-        } else {
-            cond->accept(*this);
-        }
+        evaluate_loop_condition(*cond, cond_var_name, true);
 
         while (last_value_) {
             body->accept(*this);
-            if (cond_var_name) {
-                last_value_ = table_.lookup(*cond_var_name, cond->location());
-            } else {
-                cond->accept(*this);
-            }
+            evaluate_loop_condition(*cond, cond_var_name, false);
         }
     });
 }
@@ -349,22 +340,13 @@ void Interpreter::visit(ForNode& node)
     with_loop_input_context(*cond, [&]() {
         const auto cond_var_name = validate_evaluable_node(
             *cond, "Invalid condition", evaluable_context::condition);
-        if (cond_var_name) {
-            cond->accept(*this); // one-time initialization in condition
-            last_value_ = table_.lookup(*cond_var_name, cond->location());
-        } else {
-            cond->accept(*this);
-        }
+        evaluate_loop_condition(*cond, cond_var_name, true);
 
         while (last_value_) {
             body->accept(*this);
             if (!is_missing_or_empty_stmt_node(step))
                 step->accept(*this);
-            if (cond_var_name) {
-                last_value_ = table_.lookup(*cond_var_name, cond->location());
-            } else {
-                cond->accept(*this);
-            }
+            evaluate_loop_condition(*cond, cond_var_name, false);
         }
     });
 }
@@ -538,6 +520,22 @@ void Interpreter::with_loop_input_context(const BaseNode& condition_root,
         throw;
     }
     pop_loop_input_context();
+}
+
+void Interpreter::evaluate_loop_condition(
+    BaseNode& condition,
+    const std::optional<std::string>& tracked_var_name,
+    bool initialize_tracked_var)
+{
+    if (tracked_var_name) {
+        if (initialize_tracked_var) {
+            condition.accept(*this);
+        }
+        last_value_ = table_.lookup(*tracked_var_name, condition.location());
+        return;
+    }
+
+    condition.accept(*this);
 }
 
 void Interpreter::push_loop_input_context(const BaseNode& condition_root)
