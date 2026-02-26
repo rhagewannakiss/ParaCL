@@ -59,15 +59,6 @@ void require_expr_node(const ast::BaseNode* node,
     }
 }
 
-void require_stmt_node(const ast::BaseNode* node,
-                       const ast::SourceRange& owner_loc,
-                       const char* error_msg)
-{
-    if (is_missing_or_empty_stmt_node(node)) {
-        throw std::runtime_error(make_runtime_error(owner_loc, error_msg));
-    }
-}
-
 void accept_stmt_if_present(ast::BaseNode* node, ast::Visitor& visitor)
 {
     if (has_stmt_node(node)) {
@@ -75,9 +66,8 @@ void accept_stmt_if_present(ast::BaseNode* node, ast::Visitor& visitor)
     }
 }
 
-void collect_input_nodes(
-    const ast::BaseNode* node,
-    std::unordered_set<const ast::InputNode*>& out)
+void collect_input_nodes(const ast::BaseNode* node,
+                         std::unordered_set<const ast::InputNode*>& out)
 {
     if (is_missing_node(node) || is_empty_node(node)) {
         return;
@@ -306,13 +296,11 @@ void Interpreter::visit(IfNode& node)
     auto* else_branch = node.else_branch();
 
     detail::ScopeGuard scope_guard(table_, node.location());
-    validate_evaluable_node(*cond,
-                            "Invalid condition",
-                            evaluable_context::condition);
+    validate_evaluable_node(
+        *cond, "Invalid condition", evaluable_context::condition);
     cond->accept(*this);
     if (last_value_) {
-        require_stmt_node(then_branch, node.location(), "Missing then branch");
-        then_branch->accept(*this);
+        accept_stmt_if_present(then_branch, *this);
     } else {
         accept_stmt_if_present(else_branch, *this);
     }
@@ -324,7 +312,6 @@ void Interpreter::visit(WhileNode& node)
     auto* body = node.body();
 
     require_expr_node(cond, node.location(), "Missing condition");
-    require_stmt_node(body, node.location(), "Missing while body");
 
     detail::ScopeGuard scope_guard(table_, node.location());
     with_loop_input_context(*cond, [&]() {
@@ -333,7 +320,7 @@ void Interpreter::visit(WhileNode& node)
         evaluate_loop_condition(*cond, cond_var_name, true);
 
         while (last_value_) {
-            body->accept(*this);
+            accept_stmt_if_present(body, *this);
             evaluate_loop_condition(*cond, cond_var_name, false);
         }
     });
@@ -347,7 +334,6 @@ void Interpreter::visit(ForNode& node)
     auto* body = node.get_body();
 
     require_expr_node(cond, node.location(), "Missing condition");
-    require_stmt_node(body, node.location(), "Missing for body");
 
     detail::ScopeGuard scope_guard(table_, node.location());
 
@@ -359,7 +345,7 @@ void Interpreter::visit(ForNode& node)
         evaluate_loop_condition(*cond, cond_var_name, true);
 
         while (last_value_) {
-            body->accept(*this);
+            accept_stmt_if_present(body, *this);
             accept_stmt_if_present(step, *this);
             evaluate_loop_condition(*cond, cond_var_name, false);
         }
@@ -511,7 +497,8 @@ bool Interpreter::is_active_loop_condition_input(const InputNode& node) const
 std::optional<int64_t> Interpreter::try_get_cached_loop_input(
     const InputNode& node) const
 {
-    if (!is_active_loop_condition_input(node) || loop_input_cache_stack_.empty()) {
+    if (!is_active_loop_condition_input(node) ||
+        loop_input_cache_stack_.empty()) {
         return std::nullopt;
     }
 
@@ -525,7 +512,8 @@ std::optional<int64_t> Interpreter::try_get_cached_loop_input(
 
 void Interpreter::cache_loop_input(const InputNode& node, int64_t value)
 {
-    if (!is_active_loop_condition_input(node) || loop_input_cache_stack_.empty()) {
+    if (!is_active_loop_condition_input(node) ||
+        loop_input_cache_stack_.empty()) {
         return;
     }
 

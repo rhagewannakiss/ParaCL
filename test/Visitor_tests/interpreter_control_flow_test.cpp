@@ -88,10 +88,10 @@ TEST(InterpreterControlFlowTest, IfNodeWithoutElseTest) {
     EXPECT_EQ(RunAndCapture(root), "7\n");
 }
 
-TEST(InterpreterControlFlowTest, IfNodeMissingThenWhenTrueThrows) {
+TEST(InterpreterControlFlowTest, IfNodeMissingThenWhenTrueIsNoOp) {
     ast::Interpreter interpreter;
     ast::IfNode node(std::make_unique<ast::ValueNode>(1), nullptr, nullptr);
-    EXPECT_THROW(node.accept(interpreter), std::runtime_error);
+    EXPECT_NO_THROW(node.accept(interpreter));
 }
 
 TEST(InterpreterControlFlowTest, WhileNodeZeroIterationsTest) {
@@ -243,10 +243,10 @@ TEST(InterpreterControlFlowTest, WhileNodeMissingConditionThrows) {
     EXPECT_THROW(node.accept(interpreter), std::runtime_error);
 }
 
-TEST(InterpreterControlFlowTest, WhileNodeMissingBodyThrows) {
+TEST(InterpreterControlFlowTest, WhileNodeMissingBodyWithFalseConditionIsNoOp) {
     ast::Interpreter interpreter;
-    ast::WhileNode node(std::make_unique<ast::ValueNode>(1), nullptr);
-    EXPECT_THROW(node.accept(interpreter), std::runtime_error);
+    ast::WhileNode node(std::make_unique<ast::ValueNode>(0), nullptr);
+    EXPECT_NO_THROW(node.accept(interpreter));
 }
 
 TEST(InterpreterControlFlowTest, ForNodeMultipleIterationsTest) {
@@ -414,14 +414,14 @@ TEST(InterpreterControlFlowTest, ForNodeMissingConditionThrows) {
     EXPECT_THROW(node.accept(interpreter), std::runtime_error);
 }
 
-TEST(InterpreterControlFlowTest, ForNodeMissingBodyThrows) {
+TEST(InterpreterControlFlowTest, ForNodeMissingBodyWithFalseConditionIsNoOp) {
     ast::Interpreter interpreter;
     ast::ForNode node(
         nullptr,
-        std::make_unique<ast::ValueNode>(1),
+        std::make_unique<ast::ValueNode>(0),
         nullptr,
         nullptr);
-    EXPECT_THROW(node.accept(interpreter), std::runtime_error);
+    EXPECT_NO_THROW(node.accept(interpreter));
 }
 
 TEST(InterpreterControlFlowTest, ForNodeHeaderScopeIsolationTest) {
