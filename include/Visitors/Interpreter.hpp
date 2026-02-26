@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <functional>
 #include <optional>
 #include <string>
 #include <unordered_map>
@@ -53,6 +54,8 @@ private:
     static bool add_overflow(int64_t lhs, int64_t rhs, int64_t& out);
     static bool sub_overflow(int64_t lhs, int64_t rhs, int64_t& out);
     static bool mul_overflow(int64_t lhs, int64_t rhs, int64_t& out);
+    void with_loop_input_context(const BaseNode& condition_root,
+                                 const std::function<void()>& body);
     void push_loop_input_context(const BaseNode& condition_root);
     void pop_loop_input_context();
     std::optional<std::string> validate_evaluable_node(

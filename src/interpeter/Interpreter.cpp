@@ -303,9 +303,7 @@ void Interpreter::visit(WhileNode& node)
     }
 
     detail::ScopeGuard scope_guard(table_, node.location());
-    push_loop_input_context(*cond);
-
-    try {
+    with_loop_input_context(*cond, [&]() {
         const auto cond_var_name = validate_evaluable_node(
             *cond, "Invalid condition", evaluable_context::condition);
         if (cond_var_name) {
@@ -323,12 +321,7 @@ void Interpreter::visit(WhileNode& node)
                 cond->accept(*this);
             }
         }
-    } catch (...) {
-        pop_loop_input_context();
-        throw;
-    }
-
-    pop_loop_input_context();
+    });
 }
 
 void Interpreter::visit(ForNode& node)
@@ -353,9 +346,7 @@ void Interpreter::visit(ForNode& node)
     if (!is_missing_or_empty_stmt_node(init))
         init->accept(*this);
 
-    push_loop_input_context(*cond);
-
-    try {
+    with_loop_input_context(*cond, [&]() {
         const auto cond_var_name = validate_evaluable_node(
             *cond, "Invalid condition", evaluable_context::condition);
         if (cond_var_name) {
@@ -375,12 +366,7 @@ void Interpreter::visit(ForNode& node)
                 cond->accept(*this);
             }
         }
-    } catch (...) {
-        pop_loop_input_context();
-        throw;
-    }
-
-    pop_loop_input_context();
+    });
 }
 
 void Interpreter::visit(InputNode& node)
@@ -539,6 +525,19 @@ bool Interpreter::mul_overflow(int64_t lhs, int64_t rhs, int64_t& out)
 
     out = lhs * rhs;
     return false;
+}
+
+void Interpreter::with_loop_input_context(const BaseNode& condition_root,
+                                          const std::function<void()>& body)
+{
+    push_loop_input_context(condition_root);
+    try {
+        body();
+    } catch (...) {
+        pop_loop_input_context();
+        throw;
+    }
+    pop_loop_input_context();
 }
 
 void Interpreter::push_loop_input_context(const BaseNode& condition_root)
