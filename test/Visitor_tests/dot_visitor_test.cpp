@@ -5,12 +5,14 @@
 #include <sstream>
 
 namespace {
-std::string StripAddresses(const std::string& dot) {
+std::string StripAddresses(const std::string& dot)
+{
     static const std::regex addr_regex(R"(0x[0-9a-fA-F]+)");
     return std::regex_replace(dot, addr_regex, "ADDR");
 }
 
-std::string MakeDot(ast::AST& ast_tree) {
+std::string MakeDot(ast::AST& ast_tree)
+{
     std::ostringstream out;
     ast::DotVisitor visitor(out);
     visitor.create_dot(ast_tree);
@@ -18,14 +20,16 @@ std::string MakeDot(ast::AST& ast_tree) {
 }
 } // namespace
 
-TEST(DotVisitorTest, EmptyAstEmitsEmptyGraph) {
+TEST(DotVisitorTest, EmptyAstEmitsEmptyGraph)
+{
     ast::AST ast_tree;
     const std::string dot = MakeDot(ast_tree);
 
     EXPECT_EQ(dot, "digraph AST {\n}\n");
 }
 
-TEST(DotVisitorTest, ValueNodeGraphContainsValuePayload) {
+TEST(DotVisitorTest, ValueNodeGraphContainsValuePayload)
+{
     ast::AST ast_tree(std::make_unique<ast::ValueNode>(42));
     const std::string dot = MakeDot(ast_tree);
 
@@ -34,7 +38,8 @@ TEST(DotVisitorTest, ValueNodeGraphContainsValuePayload) {
     EXPECT_NE(dot.find("shape=box"), std::string::npos);
 }
 
-TEST(DotVisitorTest, BinArithNodeGraphContainsEdgesAndOperator) {
+TEST(DotVisitorTest, BinArithNodeGraphContainsEdgesAndOperator)
+{
     ast::AST ast_tree(std::make_unique<ast::BinArithOpNode>(
         ast::bin_arith_op_type::add,
         std::make_unique<ast::ValueNode>(1),
@@ -48,7 +53,8 @@ TEST(DotVisitorTest, BinArithNodeGraphContainsEdgesAndOperator) {
     EXPECT_NE(dot.find("n0 -> n2"), std::string::npos);
 }
 
-TEST(DotVisitorTest, ComplexTreeContainsControlFlowAndVarDeclLabels) {
+TEST(DotVisitorTest, ComplexTreeContainsControlFlowAndVarDeclLabels)
+{
     auto root = std::make_unique<ast::ScopeNode>();
 
     root->add_statement(std::make_unique<ast::VarDeclNode>(
@@ -86,17 +92,17 @@ TEST(DotVisitorTest, ComplexTreeContainsControlFlowAndVarDeclLabels) {
     EXPECT_NE(dot.find("n0 -> n1"), std::string::npos);
 }
 
-TEST(DotVisitorTest, ForNodeGraphContainsForLabelAndEdges) {
+TEST(DotVisitorTest, ForNodeGraphContainsForLabelAndEdges)
+{
     auto root = std::make_unique<ast::ScopeNode>();
 
     auto for_body = std::make_unique<ast::ScopeNode>();
-    for_body->add_statement(std::make_unique<ast::PrintNode>(
-        std::make_unique<ast::VarNode>("i")));
+    for_body->add_statement(
+        std::make_unique<ast::PrintNode>(std::make_unique<ast::VarNode>("i")));
 
     root->add_statement(std::make_unique<ast::ForNode>(
-        std::make_unique<ast::AssignNode>(
-            std::make_unique<ast::VarNode>("i"),
-            std::make_unique<ast::ValueNode>(0)),
+        std::make_unique<ast::AssignNode>(std::make_unique<ast::VarNode>("i"),
+                                          std::make_unique<ast::ValueNode>(0)),
         std::make_unique<ast::BinLogicOpNode>(
             ast::bin_logic_op_type::less,
             std::make_unique<ast::VarNode>("i"),

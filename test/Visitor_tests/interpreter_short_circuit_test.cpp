@@ -4,7 +4,8 @@
 #include <sstream>
 
 namespace {
-std::string RunAndCapture(ast::BaseNode& node) {
+std::string RunAndCapture(ast::BaseNode& node)
+{
     ast::Interpreter interpreter;
     std::ostringstream out;
     std::streambuf* old = std::cout.rdbuf(out.rdbuf());
@@ -18,11 +19,18 @@ std::string RunAndCapture(ast::BaseNode& node) {
     return out.str();
 }
 
-class ScopedCinInput {
+class ScopedCinInput
+{
 public:
     explicit ScopedCinInput(const std::string& input)
-      : in_(input), old_(std::cin.rdbuf(in_.rdbuf())) {}
-    ~ScopedCinInput() { std::cin.rdbuf(old_); }
+      : in_(input)
+      , old_(std::cin.rdbuf(in_.rdbuf()))
+    {
+    }
+    ~ScopedCinInput()
+    {
+        std::cin.rdbuf(old_);
+    }
 
     ScopedCinInput(const ScopedCinInput&) = delete;
     ScopedCinInput& operator=(const ScopedCinInput&) = delete;
@@ -33,13 +41,13 @@ private:
 };
 } // namespace
 
-TEST(InterpreterShortCircuitTest, LogicalAndSkipsRightWhenLeftIsZero) {
+TEST(InterpreterShortCircuitTest, LogicalAndSkipsRightWhenLeftIsZero)
+{
     ScopedCinInput input("abc\n");
     ast::PrintNode node(std::make_unique<ast::BinLogicOpNode>(
         ast::bin_logic_op_type::logical_and,
         std::make_unique<ast::ValueNode>(0),
-        std::make_unique<ast::InputNode>()
-    ));
+        std::make_unique<ast::InputNode>()));
 
     EXPECT_NO_THROW({
         const std::string output = RunAndCapture(node);
@@ -47,13 +55,13 @@ TEST(InterpreterShortCircuitTest, LogicalAndSkipsRightWhenLeftIsZero) {
     });
 }
 
-TEST(InterpreterShortCircuitTest, LogicalOrSkipsRightWhenLeftIsNonZero) {
+TEST(InterpreterShortCircuitTest, LogicalOrSkipsRightWhenLeftIsNonZero)
+{
     ScopedCinInput input("abc\n");
     ast::PrintNode node(std::make_unique<ast::BinLogicOpNode>(
         ast::bin_logic_op_type::logical_or,
         std::make_unique<ast::ValueNode>(1),
-        std::make_unique<ast::InputNode>()
-    ));
+        std::make_unique<ast::InputNode>()));
 
     EXPECT_NO_THROW({
         const std::string output = RunAndCapture(node);
@@ -61,41 +69,40 @@ TEST(InterpreterShortCircuitTest, LogicalOrSkipsRightWhenLeftIsNonZero) {
     });
 }
 
-TEST(InterpreterShortCircuitTest, LogicalAndEvaluatesRightWhenLeftIsNonZero) {
+TEST(InterpreterShortCircuitTest, LogicalAndEvaluatesRightWhenLeftIsNonZero)
+{
     ScopedCinInput input("abc\n");
     ast::Interpreter interpreter;
     ast::PrintNode node(std::make_unique<ast::BinLogicOpNode>(
         ast::bin_logic_op_type::logical_and,
         std::make_unique<ast::ValueNode>(1),
-        std::make_unique<ast::InputNode>()
-    ));
+        std::make_unique<ast::InputNode>()));
 
     EXPECT_THROW(node.accept(interpreter), std::runtime_error);
 }
 
-TEST(InterpreterShortCircuitTest, LogicalOrEvaluatesRightWhenLeftIsZero) {
+TEST(InterpreterShortCircuitTest, LogicalOrEvaluatesRightWhenLeftIsZero)
+{
     ScopedCinInput input("abc\n");
     ast::Interpreter interpreter;
     ast::PrintNode node(std::make_unique<ast::BinLogicOpNode>(
         ast::bin_logic_op_type::logical_or,
         std::make_unique<ast::ValueNode>(0),
-        std::make_unique<ast::InputNode>()
-    ));
+        std::make_unique<ast::InputNode>()));
 
     EXPECT_THROW(node.accept(interpreter), std::runtime_error);
 }
 
-TEST(InterpreterShortCircuitTest, ForConditionLogicalAndSkipsRightOperand) {
+TEST(InterpreterShortCircuitTest, ForConditionLogicalAndSkipsRightOperand)
+{
     ScopedCinInput input("abc\n");
     ast::ScopeNode root;
     root.add_statement(std::make_unique<ast::VarDeclNode>(
-        "x",
-        std::make_unique<ast::ValueNode>(0)));
+        "x", std::make_unique<ast::ValueNode>(0)));
 
     auto for_node = std::make_unique<ast::ForNode>(
-        std::make_unique<ast::AssignNode>(
-            std::make_unique<ast::VarNode>("x"),
-            std::make_unique<ast::ValueNode>(0)),
+        std::make_unique<ast::AssignNode>(std::make_unique<ast::VarNode>("x"),
+                                          std::make_unique<ast::ValueNode>(0)),
         std::make_unique<ast::BinLogicOpNode>(
             ast::bin_logic_op_type::logical_and,
             std::make_unique<ast::ValueNode>(0),
@@ -109,8 +116,8 @@ TEST(InterpreterShortCircuitTest, ForConditionLogicalAndSkipsRightOperand) {
         std::make_unique<ast::ScopeNode>());
 
     root.add_statement(std::move(for_node));
-    root.add_statement(std::make_unique<ast::PrintNode>(
-        std::make_unique<ast::VarNode>("x")));
+    root.add_statement(
+        std::make_unique<ast::PrintNode>(std::make_unique<ast::VarNode>("x")));
 
     EXPECT_NO_THROW({
         const std::string output = RunAndCapture(root);

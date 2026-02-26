@@ -71,4 +71,5 @@ private:
         const char* error_msg,
         evaluable_context context = evaluable_context::general) const;
 };
+
 } // namespace ast
