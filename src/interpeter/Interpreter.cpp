@@ -40,6 +40,24 @@ inline bool is_missing_or_empty_stmt_node(const ast::BaseNode* node)
     return is_missing_node(node) || is_empty_node(node);
 }
 
+void require_expr_node(const ast::BaseNode* node,
+                       const ast::SourceRange& owner_loc,
+                       const char* error_msg)
+{
+    if (is_missing_or_empty_expr_node(node)) {
+        throw std::runtime_error(make_runtime_error(owner_loc, error_msg));
+    }
+}
+
+void require_stmt_node(const ast::BaseNode* node,
+                       const ast::SourceRange& owner_loc,
+                       const char* error_msg)
+{
+    if (is_missing_or_empty_stmt_node(node)) {
+        throw std::runtime_error(make_runtime_error(owner_loc, error_msg));
+    }
+}
+
 void collect_input_nodes(
     const ast::BaseNode* node,
     std::unordered_set<const ast::InputNode*>& out)
@@ -277,10 +295,7 @@ void Interpreter::visit(VarNode& node)
 void Interpreter::visit(IfNode& node)
 {
     auto* cond = node.condition();
-    if (is_missing_or_empty_expr_node(cond)) {
-        throw std::runtime_error(
-            make_runtime_error(node.location(), "Missing condition"));
-    }
+    require_expr_node(cond, node.location(), "Missing condition");
     auto* then_branch = node.then_branch();
     auto* else_branch = node.else_branch();
 
@@ -290,10 +305,7 @@ void Interpreter::visit(IfNode& node)
                             evaluable_context::condition);
     cond->accept(*this);
     if (last_value_) {
-        if (is_missing_or_empty_stmt_node(then_branch)) {
-            throw std::runtime_error(
-                make_runtime_error(node.location(), "Missing then branch"));
-        }
+        require_stmt_node(then_branch, node.location(), "Missing then branch");
         then_branch->accept(*this);
     } else if (!is_missing_or_empty_stmt_node(else_branch)) {
         else_branch->accept(*this);
@@ -305,14 +317,8 @@ void Interpreter::visit(WhileNode& node)
     auto* cond = node.condition();
     auto* body = node.body();
 
-    if (is_missing_or_empty_expr_node(cond)) {
-        throw std::runtime_error(
-            make_runtime_error(node.location(), "Missing condition"));
-    }
-    if (is_missing_or_empty_stmt_node(body)) {
-        throw std::runtime_error(
-            make_runtime_error(node.location(), "Missing while body"));
-    }
+    require_expr_node(cond, node.location(), "Missing condition");
+    require_stmt_node(body, node.location(), "Missing while body");
 
     detail::ScopeGuard scope_guard(table_, node.location());
     with_loop_input_context(*cond, [&]() {
@@ -334,15 +340,8 @@ void Interpreter::visit(ForNode& node)
     auto* step = node.get_step();
     auto* body = node.get_body();
 
-    if (is_missing_or_empty_expr_node(cond)) {
-        throw std::runtime_error(
-            make_runtime_error(node.location(), "Missing condition"));
-    }
-
-    if (is_missing_or_empty_stmt_node(body)) {
-        throw std::runtime_error(
-            make_runtime_error(node.location(), "Missing for body"));
-    }
+    require_expr_node(cond, node.location(), "Missing condition");
+    require_stmt_node(body, node.location(), "Missing for body");
 
     detail::ScopeGuard scope_guard(table_, node.location());
 
