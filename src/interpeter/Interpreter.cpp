@@ -274,7 +274,7 @@ void Interpreter::visit(AssignNode& node)
         throw std::runtime_error(
             make_runtime_error(node.location(), "AssignNode lhs must be var"));
     }
-    VarNode* var = static_cast<VarNode*>(lhs);
+    const VarNode* var = static_cast<VarNode*>(lhs);
 
     auto* operand = node.rhs();
     require_expr_node(operand, node.location(), "AssignNode missing operand");

@@ -64,8 +64,12 @@ protected:
 
     BaseNode(const BaseNode& other)
       : node_type_(other.node_type_)
+      , parent_(other.parent_)
       , loc_(other.loc_)
     {
+        for (auto& child : children_) {
+            set_child_parent(child.get());
+        }
     }
 
     BaseNode& operator=(const BaseNode& other)
@@ -83,11 +87,8 @@ protected:
       : node_type_(other.node_type_)
       , parent_(nullptr)
       , children_(std::move(other.children_))
+      , loc_(other.loc_)
     {
-        loc_ = other.loc_;
-        for (auto& child : children_) {
-            set_child_parent(child.get());
-        }
     }
 
     BaseNode& operator=(BaseNode&& other) noexcept
@@ -105,7 +106,8 @@ protected:
     }
 
 public:
-    explicit BaseNode(base_node_type node_type, SourceRange loc = SourceRange())
+    explicit BaseNode(base_node_type node_type,
+                      const SourceRange& loc = SourceRange())
       : node_type_(node_type)
       , loc_(loc)
     {
@@ -152,7 +154,7 @@ public:
         return children_;
     }
 
-    void set_location(SourceRange loc)
+    void set_location(const SourceRange& loc)
     {
         loc_ = loc;
     }
@@ -365,7 +367,7 @@ public:
     {
     }
 
-    AssignNode(NodePtr lhs = nullptr, NodePtr rhs = nullptr)
+    explicit AssignNode(NodePtr lhs = nullptr, NodePtr rhs = nullptr)
       : BaseNode(base_node_type::assign)
     {
         if (lhs) {
@@ -521,9 +523,9 @@ public:
     {
     }
 
-    IfNode(NodePtr condition = nullptr,
-           NodePtr then_branch = nullptr,
-           NodePtr else_branch = nullptr)
+    explicit IfNode(NodePtr condition = nullptr,
+                    NodePtr then_branch = nullptr,
+                    NodePtr else_branch = nullptr)
       : BaseNode(base_node_type::if_node)
     {
         set_slot(std::move(condition), Slot::condition);
@@ -534,7 +536,7 @@ public:
     IfNode(const IfNode& other)
       : BaseNode(other)
     {
-        slot_idx.fill(kInvalidIdx);
+        // slot_idx.fill(kInvalidIdx);
         if (other.get_slot(Slot::condition)) {
             set_slot(other.get_slot(Slot::condition)->clone(), Slot::condition);
         }
@@ -579,9 +581,9 @@ public:
     {
         if (this == &other)
             return *this;
-        BaseNode::operator=(std::move(other));
         slot_idx = other.slot_idx;
         other.slot_idx.fill(kInvalidIdx);
+        BaseNode::operator=(std::move(other));
         return *this;
     }
 
@@ -684,7 +686,7 @@ public:
     {
     }
 
-    WhileNode(NodePtr condition = nullptr, NodePtr body = nullptr)
+    explicit WhileNode(NodePtr condition = nullptr, NodePtr body = nullptr)
       : BaseNode(base_node_type::while_node)
     {
         set_slot(std::move(condition), Slot::condition);
@@ -729,9 +731,9 @@ public:
     {
         if (this == &other)
             return *this;
-        BaseNode::operator=(std::move(other));
         slot_idx = other.slot_idx;
         other.slot_idx.fill(kInvalidIdx);
+        BaseNode::operator=(std::move(other));
         return *this;
     }
 
@@ -881,9 +883,9 @@ public:
     {
         if (this == &other)
             return *this;
-        BaseNode::operator=(std::move(other));
         slot_idx = other.slot_idx;
         other.slot_idx.fill(kInvalidIdx);
+        BaseNode::operator=(std::move(other));
         return *this;
     }
 
@@ -1329,7 +1331,7 @@ public:
     ScopeNode(const ScopeNode& other)
       : BaseNode(other)
     {
-        for (auto& child : other.children()) {
+        for (const auto& child : other.children()) {
             add_child(child->clone());
         }
     }
@@ -1339,7 +1341,7 @@ public:
         if (this == &other)
             return *this;
         BaseNode::operator=(other);
-        for (auto& child : other.children()) {
+        for (const auto& child : other.children()) {
             add_child(child->clone());
         }
         return *this;
