@@ -28,7 +28,7 @@ void VarTable::enter_scope()
     scopes_.emplace_back();
 }
 
-void VarTable::leave_scope(SourceRange loc)
+void VarTable::leave_scope(const SourceRange& loc)
 {
     if (scopes_.size() <= 1) {
         throw std::runtime_error(

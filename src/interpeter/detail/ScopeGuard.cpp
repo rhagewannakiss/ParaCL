@@ -4,7 +4,7 @@
 
 namespace ast::detail {
 
-ScopeGuard::ScopeGuard(VarTable& table, SourceRange location)
+ScopeGuard::ScopeGuard(VarTable& table, const SourceRange& location)
   : table_(table)
   , location_(location)
 {

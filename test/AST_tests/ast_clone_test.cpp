@@ -13,11 +13,14 @@ namespace {
 bool check_node_equality_val(const ast::BaseNode* node1,
                              const ast::BaseNode* node2)
 {
-    if (node1 == nullptr && node2 == nullptr)
-        return true;
-    if (node1 == nullptr && node2 != nullptr)
+    if (node1 == nullptr) {
+        if (node2 == nullptr) {
+            return true;
+        }
         return false;
-    if (node1 != nullptr && node2 == nullptr)
+    }
+
+    if (node2 == nullptr)
         return false;
 
     auto type_1 = node1->node_type();

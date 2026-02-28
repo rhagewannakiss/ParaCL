@@ -66,10 +66,10 @@ private:
                                  const std::function<void()>& body);
     void push_loop_input_context(const BaseNode& condition_root);
     void pop_loop_input_context();
-    std::optional<std::string> validate_evaluable_node(
+    static std::optional<std::string> validate_evaluable_node(
         const BaseNode& node,
         const char* error_msg,
-        evaluable_context context = evaluable_context::general) const;
+        evaluable_context context = evaluable_context::general);
 };
 
 } // namespace ast

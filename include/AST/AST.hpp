@@ -570,12 +570,7 @@ public:
         return *this;
     }
 
-    IfNode(IfNode&& other) noexcept
-      : BaseNode(std::move(other))
-      , slot_idx(other.slot_idx)
-    {
-        other.slot_idx.fill(kInvalidIdx);
-    }
+    IfNode(IfNode&& other) noexcept = default;
 
     IfNode& operator=(IfNode&& other) noexcept
     {
@@ -720,13 +715,7 @@ public:
         return *this;
     }
 
-    WhileNode(WhileNode&& other) noexcept
-      : BaseNode(std::move(other))
-      , slot_idx(other.slot_idx)
-    {
-        other.slot_idx.fill(kInvalidIdx);
-    }
-
+    WhileNode(WhileNode&& other) noexcept = default;
     WhileNode& operator=(WhileNode&& other) noexcept
     {
         if (this == &other)
@@ -872,13 +861,7 @@ public:
         return *this;
     }
 
-    ForNode(ForNode&& other) noexcept
-      : BaseNode(std::move(other))
-      , slot_idx(other.slot_idx)
-    {
-        other.slot_idx.fill(kInvalidIdx);
-    }
-
+    ForNode(ForNode&& other) noexcept = default;
     ForNode& operator=(ForNode&& other) noexcept
     {
         if (this == &other)

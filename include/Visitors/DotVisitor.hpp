@@ -205,7 +205,7 @@ private:
         }
     }
 
-    std::string node_type_name(base_node_type type)
+    static std::string node_type_name(base_node_type type)
     {
         switch (type) {
             case base_node_type::bin_arith_op:
@@ -247,14 +247,14 @@ private:
     }
 
     template<typename NodeT>
-    std::string addr_of(const NodeT& node)
+    static std::string addr_of(const NodeT& node)
     {
         std::ostringstream oss;
         oss << static_cast<const void*>(&node);
         return oss.str();
     }
 
-    std::string op_label(bin_arith_op_type op)
+    static std::string op_label(bin_arith_op_type op)
     {
         switch (op) {
             case bin_arith_op_type::add:
@@ -271,7 +271,7 @@ private:
         return "?";
     }
 
-    std::string op_label(bin_logic_op_type op)
+    static std::string op_label(bin_logic_op_type op)
     {
         switch (op) {
             case bin_logic_op_type::greater:
@@ -296,7 +296,7 @@ private:
         return "?";
     }
 
-    std::string unop_label(unop_node_type op)
+    static std::string unop_label(unop_node_type op)
     {
         switch (op) {
             case unop_node_type::pos:

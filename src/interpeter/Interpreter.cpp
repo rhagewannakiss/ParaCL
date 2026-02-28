@@ -571,7 +571,7 @@ void Interpreter::pop_loop_input_context()
 std::optional<std::string> Interpreter::validate_evaluable_node(
     const BaseNode& node,
     const char* error_msg,
-    evaluable_context context) const
+    evaluable_context context)
 {
     if (node.node_type() == base_node_type::assign) {
         if (context != evaluable_context::condition) {
