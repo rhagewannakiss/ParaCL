@@ -64,7 +64,7 @@ protected:
 
     BaseNode(const BaseNode& other)
       : node_type_(other.node_type_)
-      , parent_(other.parent_)
+      , parent_(nullptr)
       , loc_(other.loc_)
     {
         for (auto& child : children_) {
