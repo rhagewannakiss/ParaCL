@@ -1,21 +1,22 @@
 #pragma once
 
+#include "AST/SourceRange.hpp"
+#include <array>
 #include <cassert>
+#include <cstdint>
+#include <cstdio>
 #include <deque>
 #include <memory>
+#include <stdexcept>
 #include <string>
 #include <vector>
-#include <cstdio>
-#include <stdexcept>
-#include <cstdint>
-#include <array>
-#include "AST/SourceRange.hpp"
 
 namespace ast {
 
 struct Visitor;
 
-enum class base_node_type {
+enum class base_node_type
+{
     base,
     bin_arith_op,
     bin_logic_op,
@@ -35,8 +36,7 @@ enum class base_node_type {
     empty
 };
 
-inline void ensure_child_free(bool already_set, 
-                              const char* msg) 
+inline void ensure_child_free(bool already_set, const char* msg)
 {
     if (already_set) {
         throw std::logic_error(msg);
@@ -62,13 +62,16 @@ protected:
         }
     }
 
-    BaseNode(const BaseNode& other) : 
-        node_type_(other.node_type_),
-        loc_(other.loc_) {}
-    
+    BaseNode(const BaseNode& other)
+      : node_type_(other.node_type_)
+      , loc_(other.loc_)
+    {
+    }
+
     BaseNode& operator=(const BaseNode& other)
     {
-        if (this == &other) return *this;
+        if (this == &other)
+            return *this;
         node_type_ = other.node_type_;
         loc_ = other.loc_;
         parent_ = nullptr;
@@ -77,9 +80,9 @@ protected:
     }
 
     BaseNode(BaseNode&& other) noexcept
-        : node_type_(other.node_type_), 
-        parent_(nullptr), 
-        children_(std::move(other.children_))
+      : node_type_(other.node_type_)
+      , parent_(nullptr)
+      , children_(std::move(other.children_))
     {
         loc_ = other.loc_;
         for (auto& child : children_) {
@@ -89,7 +92,8 @@ protected:
 
     BaseNode& operator=(BaseNode&& other) noexcept
     {
-        if (this == &other) return *this;
+        if (this == &other)
+            return *this;
         node_type_ = other.node_type_;
         loc_ = other.loc_;
         parent_ = nullptr;
@@ -100,21 +104,31 @@ protected:
         return *this;
     }
 
-
 public:
-    explicit BaseNode(base_node_type node_type, SourceRange loc = SourceRange()) : 
-                node_type_(node_type),
-                loc_(loc) {}
+    explicit BaseNode(base_node_type node_type, SourceRange loc = SourceRange())
+      : node_type_(node_type)
+      , loc_(loc)
+    {
+    }
     virtual ~BaseNode() = default;
 
-    base_node_type node_type() const            { return node_type_; }
-    BaseNode*      parent() const               { return parent_; }
-    void           set_parent(BaseNode* parent) { parent_ = parent; }
+    base_node_type node_type() const
+    {
+        return node_type_;
+    }
+    BaseNode* parent() const
+    {
+        return parent_;
+    }
+    void set_parent(BaseNode* parent)
+    {
+        parent_ = parent;
+    }
 
     void add_child(NodePtr child)
     {
-        if(!child) {
-            throw std::runtime_error("Trying to add null child");    
+        if (!child) {
+            throw std::runtime_error("Trying to add null child");
         }
         set_child_parent(child.get());
         children_.push_back(std::move(child));
@@ -122,18 +136,30 @@ public:
 
     void add_child_front(NodePtr child)
     {
-        if(!child) {
+        if (!child) {
             throw std::runtime_error("Trying to add null child front");
         }
         set_child_parent(child.get());
         children_.push_front(std::move(child));
     }
 
-    const std::deque<NodePtr>& children() const { return children_; }
-    std::deque<NodePtr>& children() { return children_; }
-    
-    void set_location(SourceRange loc) { loc_ = loc; }
-    const SourceRange& location() const { return loc_; }
+    const std::deque<NodePtr>& children() const
+    {
+        return children_;
+    }
+    std::deque<NodePtr>& children()
+    {
+        return children_;
+    }
+
+    void set_location(SourceRange loc)
+    {
+        loc_ = loc;
+    }
+    const SourceRange& location() const
+    {
+        return loc_;
+    }
 
     virtual void accept(Visitor& v) = 0;
     virtual NodePtr clone() const = 0;
@@ -144,15 +170,22 @@ class ValueNode : public BaseNode
     int64_t value_;
 
 public:
-    explicit ValueNode(int64_t value) : 
-        BaseNode(base_node_type::value), 
-        value_(value) {}
-    
-    ValueNode(const ValueNode& other) : 
-        BaseNode(other), value_(other.value_) {}
+    explicit ValueNode(int64_t value)
+      : BaseNode(base_node_type::value)
+      , value_(value)
+    {
+    }
 
-    ValueNode& operator=(const ValueNode& other) {
-        if (this == &other) return *this;
+    ValueNode(const ValueNode& other)
+      : BaseNode(other)
+      , value_(other.value_)
+    {
+    }
+
+    ValueNode& operator=(const ValueNode& other)
+    {
+        if (this == &other)
+            return *this;
         BaseNode::operator=(other);
         value_ = other.value_;
         return *this;
@@ -161,15 +194,20 @@ public:
     ValueNode(ValueNode&& other) noexcept = default;
     ValueNode& operator=(ValueNode&& other) noexcept = default;
 
-    int64_t value() const { return value_; }
+    int64_t value() const
+    {
+        return value_;
+    }
     void accept(Visitor& v) override;
 
-    NodePtr clone() const override {
+    NodePtr clone() const override
+    {
         return std::make_unique<ValueNode>(*this);
     }
 };
 
-enum class unop_node_type {
+enum class unop_node_type
+{
     neg,
     pos,
     logical_not,
@@ -180,25 +218,28 @@ class UnOpNode : public BaseNode
     unop_node_type op_;
 
 public:
-    explicit UnOpNode(unop_node_type op, 
-                      NodePtr operand = nullptr)
-        : BaseNode(base_node_type::unop), op_(op)
+    explicit UnOpNode(unop_node_type op, NodePtr operand = nullptr)
+      : BaseNode(base_node_type::unop)
+      , op_(op)
     {
         if (operand) {
             set_operand(std::move(operand));
         }
     }
 
-    UnOpNode(const UnOpNode& other) :
-        BaseNode(other), op_(other.op_) 
+    UnOpNode(const UnOpNode& other)
+      : BaseNode(other)
+      , op_(other.op_)
     {
-        if(other.operand()) {
+        if (other.operand()) {
             set_operand(other.operand()->clone());
         }
     }
 
-    UnOpNode& operator=(const UnOpNode& other) {
-        if (this == &other) return *this;
+    UnOpNode& operator=(const UnOpNode& other)
+    {
+        if (this == &other)
+            return *this;
         BaseNode::operator=(other);
         op_ = other.op_;
         if (other.operand()) {
@@ -212,12 +253,14 @@ public:
 
     void set_operand(NodePtr operand)
     {
-        ensure_child_free(children().size() != 0, 
-                          "operand is already set");
+        ensure_child_free(children().size() != 0, "operand is already set");
         add_child(std::move(operand));
     }
 
-    unop_node_type op() const { return op_; }
+    unop_node_type op() const
+    {
+        return op_;
+    }
 
     const BaseNode* operand() const
     {
@@ -236,8 +279,9 @@ public:
     }
 
     void accept(Visitor& v) override;
-    
-    NodePtr clone() const override {
+
+    NodePtr clone() const override
+    {
         return std::make_unique<UnOpNode>(*this);
     }
 };
@@ -245,27 +289,31 @@ public:
 class PrintNode : public BaseNode
 {
 public:
-    PrintNode() : BaseNode(base_node_type::print) {}
+    PrintNode()
+      : BaseNode(base_node_type::print)
+    {
+    }
 
     explicit PrintNode(NodePtr expr)
-        : BaseNode(base_node_type::print)
+      : BaseNode(base_node_type::print)
     {
         if (expr) {
             set_expr(std::move(expr));
         }
     }
 
-    PrintNode(const PrintNode& other) 
-        : BaseNode(other) 
+    PrintNode(const PrintNode& other)
+      : BaseNode(other)
     {
         if (other.expr()) {
             set_expr(other.expr()->clone());
         }
     }
 
-    PrintNode& operator=(const PrintNode& other) 
+    PrintNode& operator=(const PrintNode& other)
     {
-        if(this == &other) return *this;
+        if (this == &other)
+            return *this;
         BaseNode::operator=(other);
         if (other.expr()) {
             set_expr(other.expr()->clone());
@@ -278,8 +326,7 @@ public:
 
     void set_expr(NodePtr expr)
     {
-        ensure_child_free(children().size() != 0, 
-                          "expr is already set");
+        ensure_child_free(children().size() != 0, "expr is already set");
         add_child(std::move(expr));
     }
 
@@ -301,7 +348,8 @@ public:
 
     void accept(Visitor& v) override;
 
-    NodePtr clone() const override {
+    NodePtr clone() const override
+    {
         return std::make_unique<PrintNode>(*this);
     }
 };
@@ -310,12 +358,15 @@ class AssignNode : public BaseNode
 {
     bool is_lhs_set = false;
     bool is_rhs_set = false;
-public:
-    AssignNode() : BaseNode(base_node_type::assign) {}
 
-    AssignNode(NodePtr lhs = nullptr, 
-               NodePtr rhs = nullptr)
-        : BaseNode(base_node_type::assign)
+public:
+    AssignNode()
+      : BaseNode(base_node_type::assign)
+    {
+    }
+
+    AssignNode(NodePtr lhs = nullptr, NodePtr rhs = nullptr)
+      : BaseNode(base_node_type::assign)
     {
         if (lhs) {
             set_lhs(std::move(lhs));
@@ -329,8 +380,8 @@ public:
         }
     }
 
-    AssignNode(const AssignNode& other) 
-        : BaseNode(other) 
+    AssignNode(const AssignNode& other)
+      : BaseNode(other)
     {
         if (other.lhs()) {
             set_lhs(other.lhs()->clone());
@@ -340,14 +391,16 @@ public:
         }
     }
 
-    AssignNode& operator=(const AssignNode& other) {
-        if(this == &other) return *this;
+    AssignNode& operator=(const AssignNode& other)
+    {
+        if (this == &other)
+            return *this;
         BaseNode::operator=(other);
         is_lhs_set = false;
         is_rhs_set = false;
         if (other.lhs()) {
             set_lhs(other.lhs()->clone());
-   }
+        }
         if (other.rhs()) {
             set_rhs(other.rhs()->clone());
         }
@@ -404,7 +457,8 @@ public:
     }
 
     void accept(Visitor& v) override;
-    NodePtr clone() const override {
+    NodePtr clone() const override
+    {
         return std::make_unique<AssignNode>(*this);
     }
 };
@@ -415,14 +469,21 @@ class VarNode : public BaseNode
 
 public:
     explicit VarNode(std::string name)
-        : BaseNode(base_node_type::var), 
-          name_(std::move(name)) {}
+      : BaseNode(base_node_type::var)
+      , name_(std::move(name))
+    {
+    }
 
-    VarNode (const VarNode& other)
-        : BaseNode(other), name_(other.name_) {}
+    VarNode(const VarNode& other)
+      : BaseNode(other)
+      , name_(other.name_)
+    {
+    }
 
-    VarNode& operator=(const VarNode& other) {
-        if(this == &other) return *this;
+    VarNode& operator=(const VarNode& other)
+    {
+        if (this == &other)
+            return *this;
         BaseNode::operator=(other);
         name_ = other.name_;
         return *this;
@@ -431,94 +492,108 @@ public:
     VarNode(VarNode&& other) noexcept = default;
     VarNode& operator=(VarNode&& other) noexcept = default;
 
-    const std::string& name() const { return name_; }
+    const std::string& name() const
+    {
+        return name_;
+    }
     void accept(Visitor& v) override;
-    NodePtr clone() const override {
+    NodePtr clone() const override
+    {
         return std::make_unique<VarNode>(*this);
     }
 };
 
 class IfNode : public BaseNode
 {
-    enum class Slot {
+    enum class Slot
+    {
         condition,
         then_branch,
         else_branch
     };
 
-    constexpr static size_t kInvalidIdx = 
-        std::numeric_limits<size_t>::max();
-    std::array<size_t, 3> slot_idx = 
-        {kInvalidIdx, kInvalidIdx, kInvalidIdx};
-public:
-    IfNode() : BaseNode(base_node_type::if_node) {}
+    constexpr static size_t kInvalidIdx = std::numeric_limits<size_t>::max();
+    std::array<size_t, 3> slot_idx = { kInvalidIdx, kInvalidIdx, kInvalidIdx };
 
-    IfNode(NodePtr condition   = nullptr, 
-           NodePtr then_branch = nullptr, 
+public:
+    IfNode()
+      : BaseNode(base_node_type::if_node)
+    {
+    }
+
+    IfNode(NodePtr condition = nullptr,
+           NodePtr then_branch = nullptr,
            NodePtr else_branch = nullptr)
-        : BaseNode(base_node_type::if_node)
+      : BaseNode(base_node_type::if_node)
     {
         set_slot(std::move(condition), Slot::condition);
         set_slot(std::move(then_branch), Slot::then_branch);
         set_slot(std::move(else_branch), Slot::else_branch);
     }
 
-    IfNode(const IfNode& other) 
-        : BaseNode(other)
+    IfNode(const IfNode& other)
+      : BaseNode(other)
     {
         slot_idx.fill(kInvalidIdx);
-        if(other.get_slot(Slot::condition)) {
+        if (other.get_slot(Slot::condition)) {
             set_slot(other.get_slot(Slot::condition)->clone(), Slot::condition);
         }
-        if(other.get_slot(Slot::then_branch)) {
-            set_slot(other.get_slot(Slot::then_branch)->clone(), Slot::then_branch);
+        if (other.get_slot(Slot::then_branch)) {
+            set_slot(other.get_slot(Slot::then_branch)->clone(),
+                     Slot::then_branch);
         }
-        if(other.get_slot(Slot::else_branch)) {
-            set_slot(other.get_slot(Slot::else_branch)->clone(), Slot::else_branch);
+        if (other.get_slot(Slot::else_branch)) {
+            set_slot(other.get_slot(Slot::else_branch)->clone(),
+                     Slot::else_branch);
         }
     }
 
-    IfNode& operator=(const IfNode& other) {
-        if(this == &other) return *this;
+    IfNode& operator=(const IfNode& other)
+    {
+        if (this == &other)
+            return *this;
         BaseNode::operator=(other);
         slot_idx.fill(kInvalidIdx);
-        if(other.get_slot(Slot::condition)) {
+        if (other.get_slot(Slot::condition)) {
             set_slot(other.get_slot(Slot::condition)->clone(), Slot::condition);
         }
-        if(other.get_slot(Slot::then_branch)) {
-            set_slot(other.get_slot(Slot::then_branch)->clone(), Slot::then_branch);
+        if (other.get_slot(Slot::then_branch)) {
+            set_slot(other.get_slot(Slot::then_branch)->clone(),
+                     Slot::then_branch);
         }
-        if(other.get_slot(Slot::else_branch)) {
-            set_slot(other.get_slot(Slot::else_branch)->clone(), Slot::else_branch);
+        if (other.get_slot(Slot::else_branch)) {
+            set_slot(other.get_slot(Slot::else_branch)->clone(),
+                     Slot::else_branch);
         }
         return *this;
     }
 
-    IfNode(IfNode&& other) noexcept 
-        : BaseNode(std::move(other)),
-          slot_idx(other.slot_idx)
+    IfNode(IfNode&& other) noexcept
+      : BaseNode(std::move(other))
+      , slot_idx(other.slot_idx)
     {
         other.slot_idx.fill(kInvalidIdx);
     }
 
-    IfNode& operator=(IfNode&& other) noexcept 
+    IfNode& operator=(IfNode&& other) noexcept
     {
-        if(this == &other) return *this;
+        if (this == &other)
+            return *this;
         BaseNode::operator=(std::move(other));
         slot_idx = other.slot_idx;
         other.slot_idx.fill(kInvalidIdx);
         return *this;
     }
 
-    void set_condition(NodePtr cond)   
+    void set_condition(NodePtr cond)
     {
         set_slot(std::move(cond), Slot::condition);
     }
-    void set_then(NodePtr then_branch) 
+    void set_then(NodePtr then_branch)
     {
         set_slot(std::move(then_branch), Slot::then_branch);
     }
-    void set_else(NodePtr else_branch) 
+    void set_else(NodePtr else_branch)
     {
         set_slot(std::move(else_branch), Slot::else_branch);
     }
@@ -554,31 +629,37 @@ public:
     }
 
     void accept(Visitor& v) override;
-    NodePtr clone() const override {
+    NodePtr clone() const override
+    {
         return std::make_unique<IfNode>(*this);
     }
+
 private:
-    static constexpr size_t idx(Slot s) { 
-        return static_cast<size_t>(s); 
+    static constexpr size_t idx(Slot s)
+    {
+        return static_cast<size_t>(s);
     }
 
-    void set_slot(NodePtr slot, Slot s) {
+    void set_slot(NodePtr slot, Slot s)
+    {
         if (slot) {
             ensure_child_free(slot_idx[idx(s)] != kInvalidIdx,
-                                "Slot already set");
+                              "Slot already set");
             slot_idx[idx(s)] = children().size();
             add_child(std::move(slot));
         }
     }
 
-    const BaseNode* get_slot(Slot s) const {
+    const BaseNode* get_slot(Slot s) const
+    {
         if (slot_idx[idx(s)] != kInvalidIdx) {
             return children()[slot_idx[idx(s)]].get();
         }
         return nullptr;
     }
 
-    BaseNode* get_slot(Slot s) {
+    BaseNode* get_slot(Slot s)
+    {
         if (slot_idx[idx(s)] != kInvalidIdx) {
             return children()[slot_idx[idx(s)]].get();
         }
@@ -588,67 +669,73 @@ private:
 
 class WhileNode : public BaseNode
 {
-    enum class Slot {
+    enum class Slot
+    {
         condition,
         body
     };
 
-    constexpr static size_t kInvalidIdx = 
-        std::numeric_limits<size_t>::max();
-    std::array<size_t, 2> slot_idx = {kInvalidIdx, kInvalidIdx};
-public:
-    WhileNode() : BaseNode(base_node_type::while_node) {}
+    constexpr static size_t kInvalidIdx = std::numeric_limits<size_t>::max();
+    std::array<size_t, 2> slot_idx = { kInvalidIdx, kInvalidIdx };
 
-    WhileNode(NodePtr condition = nullptr, 
-              NodePtr body      = nullptr)
-        : BaseNode(base_node_type::while_node)
+public:
+    WhileNode()
+      : BaseNode(base_node_type::while_node)
+    {
+    }
+
+    WhileNode(NodePtr condition = nullptr, NodePtr body = nullptr)
+      : BaseNode(base_node_type::while_node)
     {
         set_slot(std::move(condition), Slot::condition);
         set_slot(std::move(body), Slot::body);
     }
 
-    WhileNode(const WhileNode& other) 
-        : BaseNode(other)
+    WhileNode(const WhileNode& other)
+      : BaseNode(other)
     {
         slot_idx.fill(kInvalidIdx);
-        if(other.get_slot(Slot::condition)) {
+        if (other.get_slot(Slot::condition)) {
             set_slot(other.get_slot(Slot::condition)->clone(), Slot::condition);
         }
-        if(other.get_slot(Slot::body)) {
+        if (other.get_slot(Slot::body)) {
             set_slot(other.get_slot(Slot::body)->clone(), Slot::body);
         }
     }
-            
-    WhileNode& operator=(const WhileNode& other) {
-        if(this == &other) return *this;
+
+    WhileNode& operator=(const WhileNode& other)
+    {
+        if (this == &other)
+            return *this;
         BaseNode::operator=(other);
         slot_idx.fill(kInvalidIdx);
-        if(other.get_slot(Slot::condition)) {
+        if (other.get_slot(Slot::condition)) {
             set_slot(other.get_slot(Slot::condition)->clone(), Slot::condition);
         }
-        if(other.get_slot(Slot::body)) {
+        if (other.get_slot(Slot::body)) {
             set_slot(other.get_slot(Slot::body)->clone(), Slot::body);
         }
         return *this;
     }
 
     WhileNode(WhileNode&& other) noexcept
-        : BaseNode(std::move(other)),
-          slot_idx(other.slot_idx)
+      : BaseNode(std::move(other))
+      , slot_idx(other.slot_idx)
     {
         other.slot_idx.fill(kInvalidIdx);
     }
 
     WhileNode& operator=(WhileNode&& other) noexcept
     {
-        if(this == &other) return *this;
+        if (this == &other)
+            return *this;
         BaseNode::operator=(std::move(other));
         slot_idx = other.slot_idx;
         other.slot_idx.fill(kInvalidIdx);
         return *this;
     }
 
-    void set_condition(NodePtr cond) 
+    void set_condition(NodePtr cond)
     {
         set_slot(std::move(cond), Slot::condition);
     }
@@ -678,31 +765,37 @@ public:
     }
 
     void accept(Visitor& v) override;
-    NodePtr clone() const override {
+    NodePtr clone() const override
+    {
         return std::make_unique<WhileNode>(*this);
     }
+
 private:
-    static constexpr size_t idx(Slot s) { 
-        return static_cast<size_t>(s); 
+    static constexpr size_t idx(Slot s)
+    {
+        return static_cast<size_t>(s);
     }
 
-    void set_slot(NodePtr slot, Slot s) {
+    void set_slot(NodePtr slot, Slot s)
+    {
         if (slot) {
             ensure_child_free(slot_idx[idx(s)] != kInvalidIdx,
-                                "Slot already set");
+                              "Slot already set");
             slot_idx[idx(s)] = children().size();
             add_child(std::move(slot));
         }
     }
 
-    const BaseNode* get_slot(Slot s) const {
+    const BaseNode* get_slot(Slot s) const
+    {
         if (slot_idx[idx(s)] != kInvalidIdx) {
             return children()[slot_idx[idx(s)]].get();
         }
         return nullptr;
     }
 
-    BaseNode* get_slot(Slot s) {
+    BaseNode* get_slot(Slot s)
+    {
         if (slot_idx[idx(s)] != kInvalidIdx) {
             return children()[slot_idx[idx(s)]].get();
         }
@@ -712,26 +805,31 @@ private:
 
 class ForNode : public BaseNode
 {
-    enum class Slot {
+    enum class Slot
+    {
         init,
         cond,
         step,
         body
     };
 
-    constexpr static size_t kInvalidIdx = 
-        std::numeric_limits<size_t>::max();
-    std::array<size_t, 4> slot_idx = 
-    {kInvalidIdx, kInvalidIdx, kInvalidIdx, kInvalidIdx};
+    constexpr static size_t kInvalidIdx = std::numeric_limits<size_t>::max();
+    std::array<size_t, 4> slot_idx = { kInvalidIdx,
+                                       kInvalidIdx,
+                                       kInvalidIdx,
+                                       kInvalidIdx };
 
 public:
-    ForNode() : BaseNode(base_node_type::for_node) {}
+    ForNode()
+      : BaseNode(base_node_type::for_node)
+    {
+    }
 
-    explicit ForNode(NodePtr init = nullptr, 
+    explicit ForNode(NodePtr init = nullptr,
                      NodePtr cond = nullptr,
                      NodePtr step = nullptr,
                      NodePtr body = nullptr)
-        : BaseNode(base_node_type::for_node)
+      : BaseNode(base_node_type::for_node)
     {
         set_slot(std::move(init), Slot::init);
         set_slot(std::move(cond), Slot::cond);
@@ -739,89 +837,122 @@ public:
         set_slot(std::move(body), Slot::body);
     }
 
-    ForNode(const ForNode& other) 
-        : BaseNode(other) 
+    ForNode(const ForNode& other)
+      : BaseNode(other)
     {
         slot_idx.fill(kInvalidIdx);
-        
-        if(other.get_slot(Slot::init))
+
+        if (other.get_slot(Slot::init))
             set_slot(other.get_slot(Slot::init)->clone(), Slot::init);
-        if(other.get_slot(Slot::cond))
+        if (other.get_slot(Slot::cond))
             set_slot(other.get_slot(Slot::cond)->clone(), Slot::cond);
-        if(other.get_slot(Slot::step))
+        if (other.get_slot(Slot::step))
             set_slot(other.get_slot(Slot::step)->clone(), Slot::step);
-        if(other.get_slot(Slot::body))
+        if (other.get_slot(Slot::body))
             set_slot(other.get_slot(Slot::body)->clone(), Slot::body);
     }
 
-    ForNode& operator=(const ForNode& other) {
-        if(this == &other) return *this;
+    ForNode& operator=(const ForNode& other)
+    {
+        if (this == &other)
+            return *this;
         BaseNode::operator=(other);
         slot_idx.fill(kInvalidIdx);
-        
-        if(other.get_slot(Slot::init))
+
+        if (other.get_slot(Slot::init))
             set_slot(other.get_slot(Slot::init)->clone(), Slot::init);
-        if(other.get_slot(Slot::cond))
+        if (other.get_slot(Slot::cond))
             set_slot(other.get_slot(Slot::cond)->clone(), Slot::cond);
-        if(other.get_slot(Slot::step))
+        if (other.get_slot(Slot::step))
             set_slot(other.get_slot(Slot::step)->clone(), Slot::step);
-        if(other.get_slot(Slot::body))
+        if (other.get_slot(Slot::body))
             set_slot(other.get_slot(Slot::body)->clone(), Slot::body);
         return *this;
     }
 
-    ForNode(ForNode&& other) noexcept 
-        : BaseNode(std::move(other)),
-          slot_idx(other.slot_idx)
+    ForNode(ForNode&& other) noexcept
+      : BaseNode(std::move(other))
+      , slot_idx(other.slot_idx)
     {
         other.slot_idx.fill(kInvalidIdx);
     }
 
-    ForNode& operator=(ForNode&& other) noexcept 
+    ForNode& operator=(ForNode&& other) noexcept
     {
-        if(this == &other) return *this;
+        if (this == &other)
+            return *this;
         BaseNode::operator=(std::move(other));
         slot_idx = other.slot_idx;
         other.slot_idx.fill(kInvalidIdx);
         return *this;
     }
 
-    BaseNode* get_init() { return get_slot(Slot::init); }
-    BaseNode* get_cond() { return get_slot(Slot::cond); }
-    BaseNode* get_step() { return get_slot(Slot::step); }
-    BaseNode* get_body() { return get_slot(Slot::body); }
-    
-    const BaseNode* get_init() const { return get_slot(Slot::init); }
-    const BaseNode* get_cond() const { return get_slot(Slot::cond); }
-    const BaseNode* get_step() const { return get_slot(Slot::step); }
-    const BaseNode* get_body() const { return get_slot(Slot::body); }
-    
+    BaseNode* get_init()
+    {
+        return get_slot(Slot::init);
+    }
+    BaseNode* get_cond()
+    {
+        return get_slot(Slot::cond);
+    }
+    BaseNode* get_step()
+    {
+        return get_slot(Slot::step);
+    }
+    BaseNode* get_body()
+    {
+        return get_slot(Slot::body);
+    }
+
+    const BaseNode* get_init() const
+    {
+        return get_slot(Slot::init);
+    }
+    const BaseNode* get_cond() const
+    {
+        return get_slot(Slot::cond);
+    }
+    const BaseNode* get_step() const
+    {
+        return get_slot(Slot::step);
+    }
+    const BaseNode* get_body() const
+    {
+        return get_slot(Slot::body);
+    }
+
     void accept(Visitor& v) override;
-    NodePtr clone() const override {
+    NodePtr clone() const override
+    {
         return std::make_unique<ForNode>(*this);
     }
+
 private:
-    static constexpr size_t idx(Slot s) { 
-        return static_cast<size_t>(s); 
+    static constexpr size_t idx(Slot s)
+    {
+        return static_cast<size_t>(s);
     }
 
-    void set_slot(NodePtr slot, Slot s) {
+    void set_slot(NodePtr slot, Slot s)
+    {
         if (slot) {
             ensure_child_free(slot_idx[idx(s)] != kInvalidIdx,
-                                "Slot already set");
+                              "Slot already set");
             slot_idx[idx(s)] = children().size();
             add_child(std::move(slot));
-        }     
+        }
     }
 
-    const BaseNode* get_slot(Slot s) const {
+    const BaseNode* get_slot(Slot s) const
+    {
         if (slot_idx[idx(s)] != kInvalidIdx) {
             return children()[slot_idx[idx(s)]].get();
         }
         return nullptr;
     }
 
-    BaseNode* get_slot(Slot s) {
+    BaseNode* get_slot(Slot s)
+    {
         if (slot_idx[idx(s)] != kInvalidIdx) {
             return children()[slot_idx[idx(s)]].get();
         }
@@ -832,13 +963,20 @@ private:
 class InputNode : public BaseNode
 {
 public:
-    InputNode() : BaseNode(base_node_type::input) {}
+    InputNode()
+      : BaseNode(base_node_type::input)
+    {
+    }
 
-    InputNode(const InputNode& other) 
-        : BaseNode(other) {}
+    InputNode(const InputNode& other)
+      : BaseNode(other)
+    {
+    }
 
-    InputNode& operator=(const InputNode& other) {
-        if(this == &other) return *this;
+    InputNode& operator=(const InputNode& other)
+    {
+        if (this == &other)
+            return *this;
         BaseNode::operator=(other);
         return *this;
     }
@@ -847,7 +985,8 @@ public:
     InputNode& operator=(InputNode&& other) noexcept = default;
 
     void accept(Visitor& v) override;
-    NodePtr clone() const override {
+    NodePtr clone() const override
+    {
         return std::make_unique<InputNode>(*this);
     }
 };
@@ -855,26 +994,31 @@ public:
 class ExprNode : public BaseNode
 {
 public:
-    ExprNode() : BaseNode(base_node_type::expr) {}
+    ExprNode()
+      : BaseNode(base_node_type::expr)
+    {
+    }
 
     explicit ExprNode(NodePtr expr)
-        : BaseNode(base_node_type::expr)
+      : BaseNode(base_node_type::expr)
     {
         if (expr) {
             set_expr(std::move(expr));
         }
     }
 
-    ExprNode(const ExprNode& other) 
-        : BaseNode(other) 
+    ExprNode(const ExprNode& other)
+      : BaseNode(other)
     {
         if (other.expr()) {
             set_expr(other.expr()->clone());
         }
     }
 
-    ExprNode& operator=(const ExprNode& other) {
-        if(this == &other) return *this;
+    ExprNode& operator=(const ExprNode& other)
+    {
+        if (this == &other)
+            return *this;
         BaseNode::operator=(other);
         if (other.expr()) {
             set_expr(other.expr()->clone());
@@ -887,7 +1031,7 @@ public:
 
     void set_expr(NodePtr expr)
     {
-        if(children().size() > 0) {
+        if (children().size() > 0) {
             ensure_child_free(true, "expr is already set");
         }
         add_child(std::move(expr));
@@ -910,12 +1054,14 @@ public:
     }
 
     void accept(Visitor& v) override;
-    NodePtr clone() const override {
+    NodePtr clone() const override
+    {
         return std::make_unique<ExprNode>(*this);
     }
 };
 
-enum class bin_arith_op_type {
+enum class bin_arith_op_type
+{
     add,
     sub,
     mul,
@@ -926,14 +1072,15 @@ enum class bin_arith_op_type {
 class BinArithOpNode : public BaseNode
 {
     bin_arith_op_type op_;
-    bool is_left_set  = false ;
+    bool is_left_set = false;
     bool is_right_set = false;
 
 public:
-    explicit BinArithOpNode(bin_arith_op_type op, 
-                            NodePtr left = nullptr, 
+    explicit BinArithOpNode(bin_arith_op_type op,
+                            NodePtr left = nullptr,
                             NodePtr right = nullptr)
-        : BaseNode(base_node_type::bin_arith_op), op_(op)
+      : BaseNode(base_node_type::bin_arith_op)
+      , op_(op)
     {
         if (left) {
             set_left(std::move(left));
@@ -947,8 +1094,9 @@ public:
         }
     }
 
-    BinArithOpNode(const BinArithOpNode& other) 
-        : BaseNode(other), op_(other.op_) 
+    BinArithOpNode(const BinArithOpNode& other)
+      : BaseNode(other)
+      , op_(other.op_)
     {
         if (other.left()) {
             set_left(other.left()->clone());
@@ -958,8 +1106,10 @@ public:
         }
     }
 
-    BinArithOpNode& operator=(const BinArithOpNode& other) {
-        if(this == &other) return *this;
+    BinArithOpNode& operator=(const BinArithOpNode& other)
+    {
+        if (this == &other)
+            return *this;
         BaseNode::operator=(other);
         op_ = other.op_;
         is_left_set = false;
@@ -976,32 +1126,35 @@ public:
     BinArithOpNode(BinArithOpNode&& other) noexcept = default;
     BinArithOpNode& operator=(BinArithOpNode&& other) noexcept = default;
 
-    void set_left(NodePtr child)  
+    void set_left(NodePtr child)
     {
         ensure_child_free(is_left_set, "left is already set");
         add_child(std::move(child));
         is_left_set = true;
     }
-    
-    void set_right(NodePtr child) 
+
+    void set_right(NodePtr child)
     {
         ensure_child_free(is_right_set, "right is already set");
         add_child(std::move(child));
         is_right_set = true;
     }
 
-    bin_arith_op_type op() const { return op_; }
-    
-    const BaseNode* left() const 
-    { 
+    bin_arith_op_type op() const
+    {
+        return op_;
+    }
+
+    const BaseNode* left() const
+    {
         if (children().size() > 0 && is_left_set) {
             return children()[0].get();
         }
         return nullptr;
     }
 
-    const BaseNode* right() const 
-    { 
+    const BaseNode* right() const
+    {
         if (children().size() > 1 && is_right_set) {
             return children()[1].get();
         }
@@ -1009,7 +1162,7 @@ public:
     }
 
     BaseNode* left()
-    { 
+    {
         if (children().size() > 0 && is_left_set) {
             return children()[0].get();
         }
@@ -1017,7 +1170,7 @@ public:
     }
 
     BaseNode* right()
-    { 
+    {
         if (children().size() > 1 && is_right_set) {
             return children()[1].get();
         }
@@ -1025,12 +1178,14 @@ public:
     }
 
     void accept(Visitor& v) override;
-    NodePtr clone() const override {
+    NodePtr clone() const override
+    {
         return std::make_unique<BinArithOpNode>(*this);
     }
 };
 
-enum class bin_logic_op_type {
+enum class bin_logic_op_type
+{
     greater,
     less,
     greater_equal,
@@ -1045,14 +1200,15 @@ enum class bin_logic_op_type {
 class BinLogicOpNode : public BaseNode
 {
     bin_logic_op_type op_;
-    bool is_left_set  = false;  
-    bool is_right_set = false; 
+    bool is_left_set = false;
+    bool is_right_set = false;
 
 public:
-    explicit BinLogicOpNode(bin_logic_op_type op, 
-                            NodePtr left = nullptr, 
+    explicit BinLogicOpNode(bin_logic_op_type op,
+                            NodePtr left = nullptr,
                             NodePtr right = nullptr)
-        : BaseNode(base_node_type::bin_logic_op), op_(op)
+      : BaseNode(base_node_type::bin_logic_op)
+      , op_(op)
     {
         if (left) {
             set_left(std::move(left));
@@ -1067,7 +1223,8 @@ public:
     }
 
     BinLogicOpNode(const BinLogicOpNode& other)
-        : BaseNode(other), op_(other.op_)
+      : BaseNode(other)
+      , op_(other.op_)
     {
         if (other.left()) {
             set_left(other.left()->clone());
@@ -1077,8 +1234,10 @@ public:
         }
     }
 
-    BinLogicOpNode& operator=(const BinLogicOpNode& other) {
-        if(this == &other) return *this;
+    BinLogicOpNode& operator=(const BinLogicOpNode& other)
+    {
+        if (this == &other)
+            return *this;
         BaseNode::operator=(other);
         op_ = other.op_;
         is_left_set = false;
@@ -1095,54 +1254,58 @@ public:
     BinLogicOpNode(BinLogicOpNode&& other) noexcept = default;
     BinLogicOpNode& operator=(BinLogicOpNode&& other) noexcept = default;
 
-    void set_left(NodePtr child)  
+    void set_left(NodePtr child)
     {
         ensure_child_free(is_left_set, "left is already set");
         add_child(std::move(child));
         is_left_set = true;
     }
-    void set_right(NodePtr child) 
+    void set_right(NodePtr child)
     {
         ensure_child_free(is_right_set, "right is already set");
         add_child(std::move(child));
         is_right_set = true;
     }
 
-    bin_logic_op_type op() const { return op_; }
-    const BaseNode* left() const 
-    { 
-        if (children().size() > 0 && is_left_set) 
+    bin_logic_op_type op() const
+    {
+        return op_;
+    }
+    const BaseNode* left() const
+    {
+        if (children().size() > 0 && is_left_set)
             return children()[0].get();
-        
+
         return nullptr;
     }
 
-    const BaseNode* right() const 
-    { 
-        if (children().size() > 1 && is_right_set) 
+    const BaseNode* right() const
+    {
+        if (children().size() > 1 && is_right_set)
             return children()[1].get();
-        
+
         return nullptr;
     }
 
     BaseNode* left()
-    { 
-        if (children().size() > 0 && is_left_set) 
+    {
+        if (children().size() > 0 && is_left_set)
             return children()[0].get();
-        
+
         return nullptr;
     }
 
     BaseNode* right()
-    { 
-        if (children().size() > 1 && is_right_set) 
+    {
+        if (children().size() > 1 && is_right_set)
             return children()[1].get();
-        
+
         return nullptr;
     }
 
     void accept(Visitor& v) override;
-    NodePtr clone() const override {
+    NodePtr clone() const override
+    {
         return std::make_unique<BinLogicOpNode>(*this);
     }
 };
@@ -1150,24 +1313,31 @@ public:
 class ScopeNode : public BaseNode
 {
 public:
-    ScopeNode() : BaseNode(base_node_type::scope) {}
+    ScopeNode()
+      : BaseNode(base_node_type::scope)
+    {
+    }
 
     explicit ScopeNode(std::vector<NodePtr> statements)
-        : BaseNode(base_node_type::scope)
+      : BaseNode(base_node_type::scope)
     {
         for (auto& stmt : statements) {
             add_child(std::move(stmt));
         }
     }
 
-    ScopeNode(const ScopeNode& other) : BaseNode(other) {
+    ScopeNode(const ScopeNode& other)
+      : BaseNode(other)
+    {
         for (auto& child : other.children()) {
             add_child(child->clone());
         }
     }
 
-    ScopeNode& operator=(const ScopeNode& other) {
-        if (this == &other) return *this;
+    ScopeNode& operator=(const ScopeNode& other)
+    {
+        if (this == &other)
+            return *this;
         BaseNode::operator=(other);
         for (auto& child : other.children()) {
             add_child(child->clone());
@@ -1178,14 +1348,19 @@ public:
     ScopeNode(ScopeNode&& other) noexcept = default;
     ScopeNode& operator=(ScopeNode&& other) noexcept = default;
 
-    void add_statement(NodePtr statement) {
+    void add_statement(NodePtr statement)
+    {
         add_child(std::move(statement));
     }
 
-    const std::deque<NodePtr>& statements() const { return children(); }
+    const std::deque<NodePtr>& statements() const
+    {
+        return children();
+    }
 
     void accept(Visitor& v) override;
-    NodePtr clone() const override {
+    NodePtr clone() const override
+    {
         return std::make_unique<ScopeNode>(*this);
     }
 };
@@ -1194,32 +1369,33 @@ class VarDeclNode : public BaseNode
 {
     std::string name_;
     bool is_init_set = false;
+
 public:
-    explicit VarDeclNode(std::string name, NodePtr init=nullptr) : 
-        BaseNode(base_node_type::var_decl),
-        name_(std::move(name)) 
+    explicit VarDeclNode(std::string name, NodePtr init = nullptr)
+      : BaseNode(base_node_type::var_decl)
+      , name_(std::move(name))
     {
-        if(init != nullptr)
+        if (init != nullptr)
             set_init_expr(std::move(init));
     }
 
-    VarDeclNode(const VarDeclNode& other) : 
-        BaseNode(other),
-        name_(other.name_) 
+    VarDeclNode(const VarDeclNode& other)
+      : BaseNode(other)
+      , name_(other.name_)
     {
         const auto& child = other.init_expr();
-        if(child != nullptr)
+        if (child != nullptr)
             set_init_expr(child->clone());
     }
 
-    VarDeclNode& operator=(const VarDeclNode& other) 
+    VarDeclNode& operator=(const VarDeclNode& other)
     {
-        if(this == &other) return *this;
+        if (this == &other)
+            return *this;
         BaseNode::operator=(other);
         const auto& child = other.init_expr();
         is_init_set = false;
-        if(child != nullptr)
-        {
+        if (child != nullptr) {
             set_init_expr(child->clone());
         }
         name_ = other.name_;
@@ -1229,24 +1405,25 @@ public:
     VarDeclNode(VarDeclNode&& other) noexcept = default;
     VarDeclNode& operator=(VarDeclNode&& other) noexcept = default;
 
-    void set_init_expr(NodePtr expr) {
+    void set_init_expr(NodePtr expr)
+    {
         ensure_child_free(is_init_set, "Initializer is already set");
         add_child(std::move(expr));
         is_init_set = true;
     }
-    
-    BaseNode* init_expr() 
+
+    BaseNode* init_expr()
     {
-        if(is_init_set && children().size() > 0) {
+        if (is_init_set && children().size() > 0) {
             return children()[0].get();
         } else {
             return nullptr;
         }
     }
 
-    const BaseNode* init_expr() const 
+    const BaseNode* init_expr() const
     {
-        if(is_init_set && children().size() > 0) {
+        if (is_init_set && children().size() > 0) {
             return children()[0].get();
         } else {
             return nullptr;
@@ -1254,11 +1431,13 @@ public:
     }
 
     const std::string& name() const
-    { return name_; }
+    {
+        return name_;
+    }
 
-    
     void accept(Visitor& v) override;
-    NodePtr clone() const override {
+    NodePtr clone() const override
+    {
         return std::make_unique<VarDeclNode>(*this);
     }
 };
@@ -1266,14 +1445,20 @@ public:
 class ErrorNode : public BaseNode
 {
 public:
-    explicit ErrorNode() : 
-        BaseNode(base_node_type::err) {}
+    explicit ErrorNode()
+      : BaseNode(base_node_type::err)
+    {
+    }
 
-    ErrorNode(const ErrorNode& other) :
-        BaseNode(other) {}
+    ErrorNode(const ErrorNode& other)
+      : BaseNode(other)
+    {
+    }
 
-    ErrorNode& operator=(const ErrorNode& other) {
-        if(this == &other) return *this;
+    ErrorNode& operator=(const ErrorNode& other)
+    {
+        if (this == &other)
+            return *this;
         BaseNode::operator=(other);
         return *this;
     }
@@ -1282,7 +1467,8 @@ public:
     ErrorNode& operator=(ErrorNode&& other) noexcept = default;
 
     void accept(Visitor& v) override;
-    NodePtr clone() const override {
+    NodePtr clone() const override
+    {
         return std::make_unique<ErrorNode>(*this);
     }
 };
@@ -1290,14 +1476,20 @@ public:
 class EmptyNode : public BaseNode
 {
 public:
-    explicit EmptyNode() : 
-        BaseNode(base_node_type::empty) {}
+    explicit EmptyNode()
+      : BaseNode(base_node_type::empty)
+    {
+    }
 
-    EmptyNode(const EmptyNode& other) :
-        BaseNode(other) {}
+    EmptyNode(const EmptyNode& other)
+      : BaseNode(other)
+    {
+    }
 
-    EmptyNode& operator=(const EmptyNode& other) {
-        if(this == &other) return *this;
+    EmptyNode& operator=(const EmptyNode& other)
+    {
+        if (this == &other)
+            return *this;
         BaseNode::operator=(other);
         return *this;
     }
@@ -1306,7 +1498,8 @@ public:
     EmptyNode& operator=(EmptyNode&& other) noexcept = default;
 
     void accept(Visitor& v) override;
-    NodePtr clone() const override {
+    NodePtr clone() const override
+    {
         return std::make_unique<EmptyNode>(*this);
     }
 };
@@ -1323,31 +1516,45 @@ public:
     AST() = default;
 
     explicit AST(NodePtr root)
-        : root_(std::move(root)) {}
-
-    AST(const AST& other) 
-        : AST(nullptr) 
+      : root_(std::move(root))
     {
-        if(other.root())
+    }
+
+    AST(const AST& other)
+      : AST(nullptr)
+    {
+        if (other.root())
             root_ = other.root()->clone();
     }
 
     AST& operator=(const AST& other)
     {
-        if(this == &other) return *this;
+        if (this == &other)
+            return *this;
         if (other.root()) {
             root_ = other.root()->clone();
-        } else { root_ = nullptr; }
+        } else {
+            root_ = nullptr;
+        }
         return *this;
     }
 
     AST(AST&&) noexcept = default;
     AST& operator=(AST&&) noexcept = default;
 
-    const BaseNode* root() const { return root_.get(); }
-    BaseNode* root() { return root_.get(); }
+    const BaseNode* root() const
+    {
+        return root_.get();
+    }
+    BaseNode* root()
+    {
+        return root_.get();
+    }
 
-    void set_root(NodePtr root) { root_ = std::move(root); }
+    void set_root(NodePtr root)
+    {
+        root_ = std::move(root);
+    }
 };
 
 } // namespace ast
