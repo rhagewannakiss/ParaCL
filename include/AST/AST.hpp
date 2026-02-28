@@ -571,7 +571,6 @@ public:
     }
 
     IfNode(IfNode&& other) noexcept = default;
-
     IfNode& operator=(IfNode&& other) noexcept
     {
         if (this == &other)
