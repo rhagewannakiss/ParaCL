@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.21)
 
 project(ParaCL)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 add_subdirectory(flags)
 add_subdirectory(src)
 
@@ -37,13 +39,20 @@ endif()
 find_program(CPPCHECK cppcheck)
 if(CPPCHECK)
     add_custom_target(cppcheck
-        COMMAND ${CPPCHECK} --enable=all --inconclusive --suppress=missingIncludeSystem --error-exitcode=1 --quiet
-            ${CMAKE_SOURCE_DIR}/src
-            ${CMAKE_SOURCE_DIR}/include
-            ${CMAKE_SOURCE_DIR}/test
+        COMMAND ${CPPCHECK}
+            --project=${CMAKE_BINARY_DIR}/compile_commands.json
+            --enable=all
+            --inconclusive
+            --suppress=missingIncludeSystem
+            --suppressions-list=${CMAKE_SOURCE_DIR}/.cppcheck-suppress
+            -i ${CMAKE_BINARY_DIR}/_deps
+            -i ${CMAKE_BINARY_DIR}/src/grammar.tab.cc
+            -i ${CMAKE_BINARY_DIR}/src/lex.yy.cc
+            --error-exitcode=1
         COMMENT "Cppcheck run"
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
     )
+    add_dependencies(cppcheck parser_lib)
 else()
     message(STATUS "Cppcheck not found, targets discluded")
 endif()
