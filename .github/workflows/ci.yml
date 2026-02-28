@@ -86,6 +86,9 @@ jobs:
       - name: Configure lint build
         run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 
+      - name: Generate Bison/Flex sources
+        run: cmake --build build --target parser_lib --parallel
+
       - name: Run cppcheck
         run: |
           cppcheck --project=build/compile_commands.json \
