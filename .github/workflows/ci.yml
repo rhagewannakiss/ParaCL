@@ -85,5 +85,12 @@ jobs:
 
       - name: Run cppcheck
         run: |
-          cppcheck --enable=all --inconclusive --suppress=missingIncludeSystem --error-exitcode=1 --quiet src include test
+          cppcheck --project=build/compile_command.json \
+          --enable=all \
+          --inconclusive \
+          --suppress=missingIncludeSystem \
+          -i build/_deps \
+          -i build/src/grammar.tab.cc \
+          -i build/src/lex.yy.cc \
+          --error-exitcode=1 \
 
