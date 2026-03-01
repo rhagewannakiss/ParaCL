@@ -18,7 +18,7 @@ public:
     VarTable();
 
     void enter_scope();
-    void leave_scope(SourceRange loc = {});
+    void leave_scope(const SourceRange& loc = {});
 
     void declare_in_cur_scope(const std::string& name,
                               int64_t value = 0,

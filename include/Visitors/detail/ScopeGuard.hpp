@@ -11,7 +11,7 @@ class ScopeGuard
     SourceRange location_;
 
 public:
-    explicit ScopeGuard(VarTable& table, SourceRange location = {});
+    explicit ScopeGuard(VarTable& table, const SourceRange& location = {});
     ScopeGuard(const ScopeGuard&) = delete;
     ScopeGuard& operator=(const ScopeGuard&) = delete;
     ~ScopeGuard() noexcept;

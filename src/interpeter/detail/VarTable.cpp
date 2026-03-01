@@ -28,7 +28,7 @@ void VarTable::enter_scope()
     scopes_.emplace_back();
 }
 
-void VarTable::leave_scope(SourceRange loc)
+void VarTable::leave_scope(const SourceRange& loc)
 {
     if (scopes_.size() <= 1) {
         throw std::runtime_error(
@@ -44,8 +44,8 @@ void VarTable::declare_in_cur_scope(const std::string& name,
     auto& cur = scopes_.back();
     const auto iter = cur.find(name);
     if (iter != cur.end()) {
-        throw std::runtime_error(
-            make_var_table_error(loc, "Variable " + name + " already declared"));
+        throw std::runtime_error(make_var_table_error(
+            loc, "Variable " + name + " already declared"));
     }
     cur[name] = value;
 }

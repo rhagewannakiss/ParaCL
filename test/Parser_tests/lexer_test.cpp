@@ -1,11 +1,12 @@
 #include "grammar.tab.hh"
 
+#include <FlexLexer.h>
+#include <gtest/gtest.h>
 #include <memory>
 #include <sstream>
-#include <gtest/gtest.h>
-#include <FlexLexer.h>
 
-TEST(LexerTest, BasicTokens) {
+TEST(LexerTest, BasicTokens)
+{
     std::stringstream input("x = 5;");
     yyFlexLexer lexer(&input);
 
@@ -18,7 +19,8 @@ TEST(LexerTest, BasicTokens) {
     EXPECT_EQ(lexer.yylex(), 0);
 }
 
-TEST(LexerTest, ArithmeticOperators) {
+TEST(LexerTest, ArithmeticOperators)
+{
     std::stringstream input("a + b - c * d / e % f;");
     yyFlexLexer lexer(&input);
 
@@ -37,7 +39,8 @@ TEST(LexerTest, ArithmeticOperators) {
     EXPECT_EQ(lexer.yylex(), 0);
 }
 
-TEST(LexerTest, ComparisonOperators) {
+TEST(LexerTest, ComparisonOperators)
+{
     std::stringstream input("x < y > z <= w >= v == u != t;");
     yyFlexLexer lexer(&input);
 
@@ -58,7 +61,8 @@ TEST(LexerTest, ComparisonOperators) {
     EXPECT_EQ(lexer.yylex(), 0);
 }
 
-TEST(LexerTest, LogicalOperators) {
+TEST(LexerTest, LogicalOperators)
+{
     std::stringstream input("a && b || c ! d ^ e;");
     yyFlexLexer lexer(&input);
 
@@ -75,7 +79,8 @@ TEST(LexerTest, LogicalOperators) {
     EXPECT_EQ(lexer.yylex(), 0);
 }
 
-TEST(LexerTest, BracketsAndDelimiters) {
+TEST(LexerTest, BracketsAndDelimiters)
+{
     std::stringstream input("( ) { } , ?");
     yyFlexLexer lexer(&input);
 
@@ -88,7 +93,8 @@ TEST(LexerTest, BracketsAndDelimiters) {
     EXPECT_EQ(lexer.yylex(), 0);
 }
 
-TEST(LexerTest, Keywords) {
+TEST(LexerTest, Keywords)
+{
     std::stringstream input("if else while for print");
     yyFlexLexer lexer(&input);
 
@@ -100,7 +106,8 @@ TEST(LexerTest, Keywords) {
     EXPECT_EQ(lexer.yylex(), 0);
 }
 
-TEST(LexerTest, VariablesAndNumbers) {
+TEST(LexerTest, VariablesAndNumbers)
+{
     std::stringstream input("var123 _var 123 0");
     yyFlexLexer lexer(&input);
 
@@ -115,7 +122,8 @@ TEST(LexerTest, VariablesAndNumbers) {
     EXPECT_EQ(lexer.yylex(), 0);
 }
 
-TEST(LexerTest, CommentsAndWhitespace) {
+TEST(LexerTest, CommentsAndWhitespace)
+{
     std::stringstream input("// comment\n x\t=  42;");
     yyFlexLexer lexer(&input);
 
@@ -126,17 +134,19 @@ TEST(LexerTest, CommentsAndWhitespace) {
     EXPECT_EQ(lexer.yylex(), 0);
 }
 
-TEST(LexerTest, InvalidCharacters) {
+TEST(LexerTest, InvalidCharacters)
+{
     std::stringstream input("@invalid$");
     yyFlexLexer lexer(&input);
 
-    EXPECT_EQ(lexer.yylex(), yy::parser::token_type::ERR);  // @
-    EXPECT_EQ(lexer.yylex(), yy::parser::token_type::VAR);  // invalid
-    EXPECT_EQ(lexer.yylex(), yy::parser::token_type::ERR);  // $
+    EXPECT_EQ(lexer.yylex(), yy::parser::token_type::ERR); // @
+    EXPECT_EQ(lexer.yylex(), yy::parser::token_type::VAR); // invalid
+    EXPECT_EQ(lexer.yylex(), yy::parser::token_type::ERR); // $
     EXPECT_EQ(lexer.yylex(), 0);
 }
 
-TEST(LexerTest, MultiLineInput) {
+TEST(LexerTest, MultiLineInput)
+{
     std::stringstream input("x = 1;\ny = 2;");
     yyFlexLexer lexer(&input);
 
@@ -151,7 +161,8 @@ TEST(LexerTest, MultiLineInput) {
     EXPECT_EQ(lexer.yylex(), 0);
 }
 
-TEST(LexerTest, EdgeCases) {
+TEST(LexerTest, EdgeCases)
+{
     std::stringstream input("long_var_123 999999 //end\n?");
     yyFlexLexer lexer(&input);
 
@@ -161,7 +172,8 @@ TEST(LexerTest, EdgeCases) {
     EXPECT_EQ(lexer.yylex(), 0);
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char** argv)
+{
     ::testing::InitGoogleTest(&argc, argv);
     return RUN_ALL_TESTS();
 }

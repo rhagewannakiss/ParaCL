@@ -1,5 +1,5 @@
-#include "driver/driver.hpp"
 #include "Visitors/Interpreter.hpp"
+#include "driver/driver.hpp"
 
 #include <FlexLexer.h>
 
@@ -21,9 +21,10 @@ int parse_and_run(const char* path)
     yy::NumDriver driver(&lexer);
 
     try {
-        if (!driver.parse())        return 1;
-        if (driver.has_errors())    return 1;
-
+        if (!driver.parse())
+            return 1;
+        if (driver.has_errors())
+            return 1;
 
         ast::AST ast_tree = driver.get_ast();
         if (ast_tree.root() == nullptr) {

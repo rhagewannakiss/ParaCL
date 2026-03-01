@@ -274,7 +274,7 @@ void Interpreter::visit(AssignNode& node)
         throw std::runtime_error(
             make_runtime_error(node.location(), "AssignNode lhs must be var"));
     }
-    VarNode* var = static_cast<VarNode*>(lhs);
+    const VarNode* var = static_cast<VarNode*>(lhs);
 
     auto* operand = node.rhs();
     require_expr_node(operand, node.location(), "AssignNode missing operand");
@@ -571,7 +571,7 @@ void Interpreter::pop_loop_input_context()
 std::optional<std::string> Interpreter::validate_evaluable_node(
     const BaseNode& node,
     const char* error_msg,
-    evaluable_context context) const
+    evaluable_context context)
 {
     if (node.node_type() == base_node_type::assign) {
         if (context != evaluable_context::condition) {

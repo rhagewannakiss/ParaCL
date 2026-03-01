@@ -67,3 +67,36 @@ jobs:
             UBSAN_OPTIONS: print_stacktrace=1:halt_on_error=1
           run: ctest --test-dir build-sanitizers --output-on-failure --timeout 120
 
+  lint:
+    name: Lint (clang-format, cppcheck)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install tools
+        run: sudo apt-get update && sudo apt-get install -y cmake ninja-build g++ bison flex libfl-dev clang-format cppcheck
+
+      - name: Check formatting (clang-format)
+        run: |
+          find src include test -name '*.cpp' -o -name '*.hpp' | xargs clang-format -i
+          git diff --exit-code
+
+      - name: Configure lint build
+        run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+
+      - name: Generate Bison/Flex sources
+        run: cmake --build build --target parser_lib --parallel
+
+      - name: Run cppcheck
+        run: |
+          cppcheck --project=build/compile_commands.json \
+            --enable=all \
+            --inconclusive \
+            --suppress=missingIncludeSystem \
+            --suppressions-list=.cppcheck-suppress \
+            -i build/_deps \
+            -i build/src/grammar.tab.cc \
+            -i build/src/lex.yy.cc \
+            --error-exitcode=1
