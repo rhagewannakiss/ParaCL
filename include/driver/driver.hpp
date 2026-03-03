@@ -14,7 +14,8 @@
 
 namespace yy {
 
-class NumDriver {
+class NumDriver
+{
 private:
     FlexLexer* plex_;
     location loc_;
@@ -22,10 +23,14 @@ private:
     int error_cnt_ = 0;
 
 public:
-    explicit NumDriver(FlexLexer* plex) : plex_(plex) {}
+    explicit NumDriver(FlexLexer* plex)
+      : plex_(plex)
+    {
+    }
 
     parser::token_type yylex(parser::semantic_type* yylval,
-                             parser::location_type* yylloc) {
+                             parser::location_type* yylloc)
+    {
         loc_.step();
 
         parser::token_type tt = static_cast<parser::token_type>(plex_->yylex());
@@ -35,7 +40,7 @@ public:
 
         switch (tt) {
             case parser::token_type::NUMBER:
-                yylval->emplace<int>(std::stoi(plex_->YYText()));
+                yylval->emplace<int64_t>(std::stoll(plex_->YYText()));
                 break;
             case parser::token_type::VAR:
                 yylval->emplace<std::string>(plex_->YYText());
@@ -47,7 +52,8 @@ public:
         return tt;
     }
 
-    void add_error(const location& loc, const std::string& msg) {
+    void add_error(const location& loc, const std::string& msg)
+    {
         auto range = to_source_range(loc);
         if (!range.file.empty()) {
             std::cerr << range.file << ":";
@@ -62,26 +68,31 @@ public:
         return error_cnt_ > 0;
     }
 
-    bool parse() {
+    bool parse()
+    {
         parser parser(this);
         bool res = parser.parse();
         return !res;
     }
 
-    void newline() {
+    void newline()
+    {
         loc_.lines(1);
         loc_.step();
     }
 
-    const location& get_location() const {
+    const location& get_location() const
+    {
         return loc_;
     }
 
-    void set_ast_root(std::unique_ptr<ast::BaseNode> root) {
+    void set_ast_root(std::unique_ptr<ast::BaseNode> root)
+    {
         ast_.set_root(std::move(root));
     }
 
-    const ast::AST& get_ast() const {
+    const ast::AST& get_ast() const
+    {
         return ast_;
     }
 };

@@ -4,7 +4,8 @@
 #include <sstream>
 
 namespace {
-std::string RunAndCapture(ast::BaseNode& node) {
+std::string RunAndCapture(ast::BaseNode& node)
+{
     ast::Interpreter interpreter;
     std::ostringstream out;
     std::streambuf* old = std::cout.rdbuf(out.rdbuf());
@@ -18,10 +19,18 @@ std::string RunAndCapture(ast::BaseNode& node) {
     return out.str();
 }
 
-class ScopedCinInput {
+class ScopedCinInput
+{
 public:
-    explicit ScopedCinInput(const std::string& input) : in_(input), old_(std::cin.rdbuf(in_.rdbuf())) {}
-    ~ScopedCinInput() { std::cin.rdbuf(old_); }
+    explicit ScopedCinInput(const std::string& input)
+      : in_(input)
+      , old_(std::cin.rdbuf(in_.rdbuf()))
+    {
+    }
+    ~ScopedCinInput()
+    {
+        std::cin.rdbuf(old_);
+    }
 
     ScopedCinInput(const ScopedCinInput&) = delete;
     ScopedCinInput& operator=(const ScopedCinInput&) = delete;
@@ -32,27 +41,29 @@ private:
 };
 } // namespace
 
-TEST(InterpreterStmtTest, VarDeclNodeWithInitTest) {
+TEST(InterpreterStmtTest, VarDeclNodeWithInitTest)
+{
     ast::ScopeNode root;
     root.add_statement(std::make_unique<ast::VarDeclNode>(
-        "x",
-        std::make_unique<ast::ValueNode>(11)));
-    root.add_statement(std::make_unique<ast::PrintNode>(
-        std::make_unique<ast::VarNode>("x")));
+        "x", std::make_unique<ast::ValueNode>(11)));
+    root.add_statement(
+        std::make_unique<ast::PrintNode>(std::make_unique<ast::VarNode>("x")));
 
     EXPECT_EQ(RunAndCapture(root), "11\n");
 }
 
-TEST(InterpreterStmtTest, VarDeclNodeWithoutInitTest) {
+TEST(InterpreterStmtTest, VarDeclNodeWithoutInitTest)
+{
     ast::ScopeNode root;
     root.add_statement(std::make_unique<ast::VarDeclNode>("x"));
-    root.add_statement(std::make_unique<ast::PrintNode>(
-        std::make_unique<ast::VarNode>("x")));
+    root.add_statement(
+        std::make_unique<ast::PrintNode>(std::make_unique<ast::VarNode>("x")));
 
     EXPECT_EQ(RunAndCapture(root), "0\n");
 }
 
-TEST(InterpreterStmtTest, VarDeclDuplicateInSameScopeThrows) {
+TEST(InterpreterStmtTest, VarDeclDuplicateInSameScopeThrows)
+{
     ast::Interpreter interpreter;
     ast::ScopeNode root;
     root.add_statement(std::make_unique<ast::VarDeclNode>("x"));
@@ -61,84 +72,91 @@ TEST(InterpreterStmtTest, VarDeclDuplicateInSameScopeThrows) {
     EXPECT_THROW(root.accept(interpreter), std::runtime_error);
 }
 
-TEST(InterpreterStmtTest, AssignNodeExistingVariableTest) {
+TEST(InterpreterStmtTest, AssignNodeExistingVariableTest)
+{
     ast::ScopeNode root;
     root.add_statement(std::make_unique<ast::VarDeclNode>(
-        "x",
-        std::make_unique<ast::ValueNode>(1)));
-    root.add_statement(std::make_unique<ast::AssignNode>(
-        std::make_unique<ast::VarNode>("x"),
-        std::make_unique<ast::ValueNode>(9)));
-    root.add_statement(std::make_unique<ast::PrintNode>(
-        std::make_unique<ast::VarNode>("x")));
+        "x", std::make_unique<ast::ValueNode>(1)));
+    root.add_statement(
+        std::make_unique<ast::AssignNode>(std::make_unique<ast::VarNode>("x"),
+                                          std::make_unique<ast::ValueNode>(9)));
+    root.add_statement(
+        std::make_unique<ast::PrintNode>(std::make_unique<ast::VarNode>("x")));
 
     EXPECT_EQ(RunAndCapture(root), "9\n");
 }
 
-TEST(InterpreterStmtTest, AssignNodeCreatesVariableWhenMissingTest) {
+TEST(InterpreterStmtTest, AssignNodeCreatesVariableWhenMissingTest)
+{
     ast::ScopeNode root;
-    root.add_statement(std::make_unique<ast::AssignNode>(
-        std::make_unique<ast::VarNode>("x"),
-        std::make_unique<ast::ValueNode>(5)));
-    root.add_statement(std::make_unique<ast::PrintNode>(
-        std::make_unique<ast::VarNode>("x")));
+    root.add_statement(
+        std::make_unique<ast::AssignNode>(std::make_unique<ast::VarNode>("x"),
+                                          std::make_unique<ast::ValueNode>(5)));
+    root.add_statement(
+        std::make_unique<ast::PrintNode>(std::make_unique<ast::VarNode>("x")));
 
     EXPECT_EQ(RunAndCapture(root), "5\n");
 }
 
-TEST(InterpreterStmtTest, AssignNodeInvalidLhsThrows) {
+TEST(InterpreterStmtTest, AssignNodeInvalidLhsThrows)
+{
     ast::Interpreter interpreter;
-    ast::AssignNode node(
-        std::make_unique<ast::ValueNode>(1),
-        std::make_unique<ast::ValueNode>(2));
+    ast::AssignNode node(std::make_unique<ast::ValueNode>(1),
+                         std::make_unique<ast::ValueNode>(2));
 
     EXPECT_THROW(node.accept(interpreter), std::runtime_error);
 }
 
-TEST(InterpreterStmtTest, AssignNodeMissingRhsThrows) {
+TEST(InterpreterStmtTest, AssignNodeMissingRhsThrows)
+{
     ast::Interpreter interpreter;
     ast::AssignNode node(std::make_unique<ast::VarNode>("x"), nullptr);
 
     EXPECT_THROW(node.accept(interpreter), std::runtime_error);
 }
 
-TEST(InterpreterStmtTest, InputNodeReadsIntegerTest) {
+TEST(InterpreterStmtTest, InputNodeReadsIntegerTest)
+{
     ScopedCinInput input("42\n");
 
     ast::ScopeNode root;
     root.add_statement(std::make_unique<ast::VarDeclNode>("x"));
-    root.add_statement(std::make_unique<ast::InputNode>(
-        std::make_unique<ast::VarNode>("x")));
-    root.add_statement(std::make_unique<ast::PrintNode>(
-        std::make_unique<ast::VarNode>("x")));
+    root.add_statement(
+        std::make_unique<ast::AssignNode>(std::make_unique<ast::VarNode>("x"),
+                                          std::make_unique<ast::InputNode>()));
+    root.add_statement(
+        std::make_unique<ast::PrintNode>(std::make_unique<ast::VarNode>("x")));
 
     EXPECT_EQ(RunAndCapture(root), "42\n");
 }
 
-TEST(InterpreterStmtTest, InputNodeInvalidInputThrows) {
+TEST(InterpreterStmtTest, InputNodeInvalidInputThrows)
+{
     ScopedCinInput input("abc\n");
 
     ast::Interpreter interpreter;
-    ast::InputNode node(std::make_unique<ast::VarNode>("x"));
+    ast::InputNode node;
     EXPECT_THROW(node.accept(interpreter), std::runtime_error);
 }
 
-TEST(InterpreterStmtTest, PrintNodeValidExprTest) {
+TEST(InterpreterStmtTest, PrintNodeValidExprTest)
+{
     ast::PrintNode node(std::make_unique<ast::ValueNode>(77));
     EXPECT_EQ(RunAndCapture(node), "77\n");
 }
 
-TEST(InterpreterStmtTest, PrintNodeMissingExprThrows) {
+TEST(InterpreterStmtTest, PrintNodeMissingExprThrows)
+{
     ast::Interpreter interpreter;
     ast::PrintNode node;
     EXPECT_THROW(node.accept(interpreter), std::runtime_error);
 }
 
-TEST(InterpreterStmtTest, ForNodeWithoutStepUsesBodyUpdateTest) {
+TEST(InterpreterStmtTest, ForNodeWithoutStepUsesBodyUpdateTest)
+{
     ast::ScopeNode root;
     root.add_statement(std::make_unique<ast::VarDeclNode>(
-        "x",
-        std::make_unique<ast::ValueNode>(0)));
+        "x", std::make_unique<ast::ValueNode>(0)));
 
     auto for_body = std::make_unique<ast::ScopeNode>();
     for_body->add_statement(std::make_unique<ast::AssignNode>(
@@ -149,9 +167,8 @@ TEST(InterpreterStmtTest, ForNodeWithoutStepUsesBodyUpdateTest) {
             std::make_unique<ast::ValueNode>(1))));
 
     root.add_statement(std::make_unique<ast::ForNode>(
-        std::make_unique<ast::AssignNode>(
-            std::make_unique<ast::VarNode>("x"),
-            std::make_unique<ast::ValueNode>(0)),
+        std::make_unique<ast::AssignNode>(std::make_unique<ast::VarNode>("x"),
+                                          std::make_unique<ast::ValueNode>(0)),
         std::make_unique<ast::BinLogicOpNode>(
             ast::bin_logic_op_type::less,
             std::make_unique<ast::VarNode>("x"),
@@ -159,8 +176,8 @@ TEST(InterpreterStmtTest, ForNodeWithoutStepUsesBodyUpdateTest) {
         nullptr,
         std::move(for_body)));
 
-    root.add_statement(std::make_unique<ast::PrintNode>(
-        std::make_unique<ast::VarNode>("x")));
+    root.add_statement(
+        std::make_unique<ast::PrintNode>(std::make_unique<ast::VarNode>("x")));
 
     EXPECT_EQ(RunAndCapture(root), "3\n");
 }
