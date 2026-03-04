@@ -152,7 +152,8 @@ TEST(InterpreterControlFlowTest, WhileNodeMultipleIterationsTest)
     EXPECT_EQ(RunAndCapture(root), "3\n");
 }
 
-TEST(InterpreterControlFlowTest, WhileConditionInputNodeReadsFreshValueEachCheck)
+TEST(InterpreterControlFlowTest,
+     WhileConditionInputNodeReadsFreshValueEachCheck)
 {
     ScopedCinInput input("3\n1\n");
 
