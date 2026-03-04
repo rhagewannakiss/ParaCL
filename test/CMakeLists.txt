@@ -16,6 +16,7 @@ add_executable(ast_clone_test
 target_link_libraries(ast_clone_test
     PRIVATE
         paracl_core
+        flags_test
         GTest::gtest_main
 )
 
@@ -26,6 +27,7 @@ add_executable(ast_print_test
 target_link_libraries(ast_print_test
     PRIVATE
         paracl_core
+        flags_test
 )
 
 add_executable(ast_nodes_test
@@ -35,6 +37,7 @@ add_executable(ast_nodes_test
 target_link_libraries(ast_nodes_test
     PRIVATE
         paracl_core
+        flags_test
         GTest::gtest_main
 )
 
@@ -45,6 +48,7 @@ add_executable(error_formatter_test
 target_link_libraries(error_formatter_test
     PRIVATE
         paracl_core
+        flags_test
         GTest::gtest_main
 )
 
@@ -55,6 +59,7 @@ add_executable(interpreter_runtime_validation_test
 target_link_libraries(interpreter_runtime_validation_test
     PRIVATE
         paracl_core
+        flags_test
         GTest::gtest_main
 )
 
@@ -65,6 +70,7 @@ add_executable(interpreter_expr_test
 target_link_libraries(interpreter_expr_test
     PRIVATE
         paracl_core
+        flags_test
         GTest::gtest_main
 )
 
@@ -75,6 +81,7 @@ add_executable(interpreter_expr_errors_test
 target_link_libraries(interpreter_expr_errors_test
     PRIVATE
         paracl_core
+        flags_test
         GTest::gtest_main
 )
 
@@ -85,6 +92,7 @@ add_executable(interpreter_short_circuit_test
 target_link_libraries(interpreter_short_circuit_test
     PRIVATE
         paracl_core
+        flags_test
         GTest::gtest_main
 )
 
@@ -95,6 +103,7 @@ add_executable(interpreter_control_flow_test
 target_link_libraries(interpreter_control_flow_test
     PRIVATE
         paracl_core
+        flags_test
         GTest::gtest_main
 )
 
@@ -105,6 +114,7 @@ add_executable(interpreter_stmt_test
 target_link_libraries(interpreter_stmt_test
     PRIVATE
         paracl_core
+        flags_test
         GTest::gtest_main
 )
 
@@ -115,6 +125,7 @@ add_executable(dot_visitor_test
 target_link_libraries(dot_visitor_test
     PRIVATE
         paracl_core
+        flags_test
         GTest::gtest_main
 )
 
@@ -125,6 +136,7 @@ add_executable(lexer_test
 target_link_libraries(lexer_test
     PRIVATE
         GTest::gtest_main
+        flags_test
         parser_lib
         paracl_core
 )
@@ -143,6 +155,7 @@ add_executable(parser_test
 target_link_libraries(parser_test
     PRIVATE
         GTest::gtest_main
+        flags_test
         parser_lib
         paracl_core
 )
