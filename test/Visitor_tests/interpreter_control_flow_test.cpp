@@ -152,7 +152,7 @@ TEST(InterpreterControlFlowTest, WhileNodeMultipleIterationsTest)
     EXPECT_EQ(RunAndCapture(root), "3\n");
 }
 
-TEST(InterpreterControlFlowTest, WhileConditionInputNodeIsReadOncePerNode)
+TEST(InterpreterControlFlowTest, WhileConditionInputNodeReadsFreshValueEachCheck)
 {
     ScopedCinInput input("3\n1\n");
 
@@ -177,7 +177,7 @@ TEST(InterpreterControlFlowTest, WhileConditionInputNodeIsReadOncePerNode)
     root.add_statement(
         std::make_unique<ast::PrintNode>(std::make_unique<ast::VarNode>("x")));
 
-    EXPECT_EQ(RunAndCapture(root), "3\n");
+    EXPECT_EQ(RunAndCapture(root), "1\n");
 }
 
 TEST(InterpreterControlFlowTest, WhileConditionAssignTracksVariableValue)
@@ -314,7 +314,7 @@ TEST(InterpreterControlFlowTest, ForNodeZeroIterationsTest)
     EXPECT_EQ(RunAndCapture(root), "0\n");
 }
 
-TEST(InterpreterControlFlowTest, ForConditionInputNodeIsReadOncePerNode)
+TEST(InterpreterControlFlowTest, ForConditionInputNodeReadsFreshValueEachCheck)
 {
     ScopedCinInput input("4\n1\n");
 
@@ -339,7 +339,7 @@ TEST(InterpreterControlFlowTest, ForConditionInputNodeIsReadOncePerNode)
     root.add_statement(
         std::make_unique<ast::PrintNode>(std::make_unique<ast::VarNode>("x")));
 
-    EXPECT_EQ(RunAndCapture(root), "4\n");
+    EXPECT_EQ(RunAndCapture(root), "1\n");
 }
 
 TEST(InterpreterControlFlowTest, ForConditionAssignTracksVariableValue)
