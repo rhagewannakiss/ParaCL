@@ -1,6 +1,5 @@
 *:/build/src/grammar.tab.hh
-missingInclude:*test/*
-missingInclude:include/driver/driver.hpp
+missingInclude
 unusedFunction:include/AST/AST.hpp
 unusedFunction:include/driver/driver.hpp
 unusedFunction:src/parser/scanner_location_bridge.cpp
