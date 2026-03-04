@@ -2,7 +2,26 @@
 #include "driver/driver.hpp"
 
 #include <gtest/gtest.h>
+#include <functional>
 #include <sstream>
+
+namespace {
+
+std::string CaptureCerr(const std::function<void()>& fn)
+{
+    std::ostringstream err;
+    std::streambuf* old = std::cerr.rdbuf(err.rdbuf());
+    try {
+        fn();
+    } catch (...) {
+        std::cerr.rdbuf(old);
+        throw;
+    }
+    std::cerr.rdbuf(old);
+    return err.str();
+}
+
+} // namespace
 
 TEST(ParserTest, SimpleAssignment)
 {
@@ -255,6 +274,28 @@ TEST(ParserTest, EmptyConditionError)
     yy::NumDriver driver(&lexer);
 
     EXPECT_TRUE(driver.parse());
+    EXPECT_TRUE(driver.has_errors());
+}
+
+TEST(ParserTest, DriverErrorsUseGnuFormat)
+{
+    std::stringstream input;
+    yyFlexLexer lexer(&input);
+    yy::NumDriver driver(&lexer);
+
+    yy::location loc;
+    std::string filename = "diagnostic.pcl";
+    loc.begin.filename = &filename;
+    loc.end.filename = &filename;
+    loc.begin.line = 7;
+    loc.begin.column = 9;
+    loc.end.line = 7;
+    loc.end.column = 10;
+
+    const std::string output = CaptureCerr(
+        [&]() { driver.add_error(loc, "Missing condition in while"); });
+
+    EXPECT_EQ(output, "diagnostic.pcl:7:9: error: Missing condition in while\n");
     EXPECT_TRUE(driver.has_errors());
 }
 

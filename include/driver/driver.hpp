@@ -5,12 +5,11 @@
 #include <FlexLexer.h>
 
 #include <iostream>
-#include <map>
 #include <string>
-#include <vector>
 
 #include "AST/AST.hpp"
 #include "driver/location_utils.hpp"
+#include "errors-output/error-formatter.hpp"
 
 namespace yy {
 
@@ -55,11 +54,7 @@ public:
     void add_error(const location& loc, const std::string& msg)
     {
         auto range = to_source_range(loc);
-        if (!range.file.empty()) {
-            std::cerr << range.file << ":";
-        }
-        std::cerr << "Error at " << loc.begin.line << ":" << loc.begin.column
-                  << ": " << msg << std::endl;
+        std::cerr << err::format_error(range, msg) << std::endl;
         error_cnt_++;
     }
 

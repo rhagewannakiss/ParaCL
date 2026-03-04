@@ -38,6 +38,16 @@ target_link_libraries(ast_nodes_test
         GTest::gtest_main
 )
 
+add_executable(error_formatter_test
+    AST_tests/error_formatter_test.cpp
+)
+
+target_link_libraries(error_formatter_test
+    PRIVATE
+        paracl_core
+        GTest::gtest_main
+)
+
 add_executable(interpreter_runtime_validation_test
     Visitor_tests/interpreter_runtime_validation_test.cpp
 )
@@ -123,7 +133,7 @@ target_include_directories(lexer_test
     PRIVATE
         ${PROJECT_BINARY_DIR}/src/parser
         ${CMAKE_SOURCE_DIR}/include
-       ${FLEX_INCLUDE_DIRS}
+        ${FLEX_INCLUDE_DIRS}
 )
 
 add_executable(parser_test
@@ -141,12 +151,13 @@ target_include_directories(parser_test
     PRIVATE
         ${PROJECT_BINARY_DIR}/src/parser
         ${CMAKE_SOURCE_DIR}/include
-       ${FLEX_INCLUDE_DIRS}
+        ${FLEX_INCLUDE_DIRS}
 )
 
 include(GoogleTest)
 gtest_discover_tests(ast_clone_test)
 gtest_discover_tests(ast_nodes_test)
+gtest_discover_tests(error_formatter_test)
 gtest_discover_tests(interpreter_runtime_validation_test)
 gtest_discover_tests(interpreter_expr_test)
 gtest_discover_tests(interpreter_expr_errors_test)

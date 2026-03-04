@@ -1,6 +1,7 @@
 #include "Visitors/Interpreter.hpp"
 #include "AST/AST.hpp"
 #include "Visitors/detail/ScopeGuard.hpp"
+#include "errors-output/error-formatter.hpp"
 
 #include <iostream>
 #include <limits>
@@ -9,16 +10,6 @@
 #include <string>
 
 namespace {
-
-std::string make_runtime_error(const ast::SourceRange& loc,
-                               const std::string& message)
-{
-    const std::string location = loc.make_string();
-    if (location.empty()) {
-        return "error: " + message;
-    }
-    return location + ": error: " + message;
-}
 
 inline bool is_missing_node(const ast::BaseNode* node)
 {
@@ -55,7 +46,7 @@ void require_expr_node(const ast::BaseNode* node,
                        const char* error_msg)
 {
     if (is_missing_or_empty_expr_node(node)) {
-        throw std::runtime_error(make_runtime_error(owner_loc, error_msg));
+        throw std::runtime_error(err::format_error(owner_loc, error_msg));
     }
 }
 
@@ -73,7 +64,7 @@ int64_t read_input_int64_or_throw(const ast::SourceRange& location)
         std::cin.clear();
         std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
         throw std::runtime_error(
-            make_runtime_error(location, "Input error: expected int64_t"));
+            err::format_error(location, "Input error: expected int64_t"));
     }
     return value;
 }
@@ -102,21 +93,21 @@ void Interpreter::visit(BinArithOpNode& node)
     switch (node.op()) {
         case bin_arith_op_type::add:
             if (add_overflow(left_res, right_res, checked_result)) {
-                throw std::runtime_error(make_runtime_error(
+                throw std::runtime_error(err::format_error(
                     node.location(), "Integer overflow in addition"));
             }
             last_value_ = checked_result;
             break;
         case bin_arith_op_type::sub:
             if (sub_overflow(left_res, right_res, checked_result)) {
-                throw std::runtime_error(make_runtime_error(
+                throw std::runtime_error(err::format_error(
                     node.location(), "Integer overflow in subtraction"));
             }
             last_value_ = checked_result;
             break;
         case bin_arith_op_type::mul:
             if (mul_overflow(left_res, right_res, checked_result)) {
-                throw std::runtime_error(make_runtime_error(
+                throw std::runtime_error(err::format_error(
                     node.location(), "Integer overflow in multiplication"));
             }
             last_value_ = checked_result;
@@ -124,11 +115,11 @@ void Interpreter::visit(BinArithOpNode& node)
         case bin_arith_op_type::div:
             if (right_res == 0) {
                 throw std::runtime_error(
-                    make_runtime_error(node.location(), "Division by zero"));
+                    err::format_error(node.location(), "Division by zero"));
             }
             if (left_res == std::numeric_limits<int64_t>::min() &&
                 right_res == -1) {
-                throw std::runtime_error(make_runtime_error(
+                throw std::runtime_error(err::format_error(
                     node.location(), "Integer overflow in division"));
             }
             last_value_ = left_res / right_res;
@@ -136,17 +127,17 @@ void Interpreter::visit(BinArithOpNode& node)
         case ast::bin_arith_op_type::mod:
             if (right_res == 0) {
                 throw std::runtime_error(
-                    make_runtime_error(node.location(), "Division by zero"));
+                    err::format_error(node.location(), "Division by zero"));
             }
             if (left_res == std::numeric_limits<int64_t>::min() &&
                 right_res == -1) {
-                throw std::runtime_error(make_runtime_error(
+                throw std::runtime_error(err::format_error(
                     node.location(), "Integer overflow in modulus"));
             }
             last_value_ = left_res % right_res;
             break;
         default:
-            throw std::runtime_error(make_runtime_error(
+            throw std::runtime_error(err::format_error(
                 node.location(), "Unknown binary arithmetic operator"));
             break;
     }
@@ -208,7 +199,7 @@ void Interpreter::visit(BinLogicOpNode& node)
             last_value_ = left_res ^ last_value_;
             break;
         default:
-            throw std::runtime_error(make_runtime_error(
+            throw std::runtime_error(err::format_error(
                 node.location(), "Unknown binary logical operator"));
             break;
     }
@@ -230,7 +221,7 @@ void Interpreter::visit(UnOpNode& node)
             break;
         case unop_node_type::neg:
             if (last_value_ == std::numeric_limits<int64_t>::min()) {
-                throw std::runtime_error(make_runtime_error(
+                throw std::runtime_error(err::format_error(
                     node.location(), "Integer overflow in unary minus"));
             }
             last_value_ = -last_value_;
@@ -250,7 +241,7 @@ void Interpreter::visit(AssignNode& node)
     bool is_var = lhs->node_type() == base_node_type::var;
     if (!is_var) {
         throw std::runtime_error(
-            make_runtime_error(node.location(), "AssignNode lhs must be var"));
+            err::format_error(node.location(), "AssignNode lhs must be var"));
     }
     const VarNode* var = static_cast<VarNode*>(lhs);
 
@@ -378,7 +369,7 @@ void Interpreter::visit(VarDeclNode& node)
 void Interpreter::visit(ErrorNode& node)
 {
     throw std::runtime_error(
-        make_runtime_error(node.location(), "Cannot execute error node"));
+        err::format_error(node.location(), "Cannot execute error node"));
 }
 
 void Interpreter::visit(EmptyNode&)
@@ -470,16 +461,16 @@ std::optional<std::string> Interpreter::validate_evaluable_node(
     if (node.node_type() == base_node_type::assign) {
         if (context != evaluable_context::condition) {
             throw std::runtime_error(
-                make_runtime_error(node.location(), error_msg));
+                err::format_error(node.location(), error_msg));
         }
 
         const auto* assign = dynamic_cast<const AssignNode*>(&node);
         if (!assign || is_missing_or_empty_expr_node(assign->lhs())) {
-            throw std::runtime_error(make_runtime_error(
+            throw std::runtime_error(err::format_error(
                 node.location(), "AssignNode condition missing lhs"));
         }
         if (assign->lhs()->node_type() != base_node_type::var) {
-            throw std::runtime_error(make_runtime_error(
+            throw std::runtime_error(err::format_error(
                 node.location(), "AssignNode condition lhs must be var"));
         }
         const auto* var = static_cast<const VarNode*>(assign->lhs());
@@ -489,12 +480,12 @@ std::optional<std::string> Interpreter::validate_evaluable_node(
     if (node.node_type() == base_node_type::var_decl) {
         if (context != evaluable_context::condition) {
             throw std::runtime_error(
-                make_runtime_error(node.location(), error_msg));
+                err::format_error(node.location(), error_msg));
         }
 
         const auto* decl = dynamic_cast<const VarDeclNode*>(&node);
         if (!decl) {
-            throw std::runtime_error(make_runtime_error(
+            throw std::runtime_error(err::format_error(
                 node.location(), "Invalid VarDeclNode condition"));
         }
         return decl->name();
@@ -509,9 +500,9 @@ std::optional<std::string> Interpreter::validate_evaluable_node(
         case base_node_type::err:
         case base_node_type::empty:
             throw std::runtime_error(
-                make_runtime_error(node.location(), error_msg));
+                err::format_error(node.location(), error_msg));
         case base_node_type::base:
-            throw std::runtime_error(make_runtime_error(
+            throw std::runtime_error(err::format_error(
                 node.location(), "you cannot use abstract class"));
         case base_node_type::assign:
         case base_node_type::var_decl:
