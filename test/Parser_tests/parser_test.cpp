@@ -1,8 +1,8 @@
 #include "AST/AST.hpp"
 #include "driver/driver.hpp"
 
-#include <gtest/gtest.h>
 #include <functional>
+#include <gtest/gtest.h>
 #include <sstream>
 
 namespace {
@@ -295,7 +295,8 @@ TEST(ParserTest, DriverErrorsUseGnuFormat)
     const std::string output = CaptureCerr(
         [&]() { driver.add_error(loc, "Missing condition in while"); });
 
-    EXPECT_EQ(output, "diagnostic.pcl:7:9: error: Missing condition in while\n");
+    EXPECT_EQ(output,
+              "diagnostic.pcl:7:9: error: Missing condition in while\n");
     EXPECT_TRUE(driver.has_errors());
 }
 

@@ -2,8 +2,8 @@
 #include "Visitors/Interpreter.hpp"
 #include "gtest/gtest.h"
 #include <memory>
-#include <stdexcept>
 #include <sstream>
+#include <stdexcept>
 
 namespace {
 

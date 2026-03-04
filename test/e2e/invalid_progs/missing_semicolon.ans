@@ -1,0 +1,2 @@
+test/e2e/invalid_progs/missing_semicolon.pcl:1:4: error: syntax error, unexpected end of file
+test/e2e/invalid_progs/missing_semicolon.pcl:1:4: error: No semicolon

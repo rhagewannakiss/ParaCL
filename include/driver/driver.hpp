@@ -6,6 +6,7 @@
 
 #include <iostream>
 #include <string>
+#include <utility>
 
 #include "AST/AST.hpp"
 #include "driver/location_utils.hpp"
@@ -17,14 +18,17 @@ class NumDriver
 {
 private:
     FlexLexer* plex_;
+    std::string filename_;
     location loc_;
     ast::AST ast_;
     int error_cnt_ = 0;
 
 public:
-    explicit NumDriver(FlexLexer* plex)
+    explicit NumDriver(FlexLexer* plex, std::string fn = "")
       : plex_(plex)
+      , filename_(std::move(fn))
     {
+        loc_.initialize(&filename_);
     }
 
     parser::token_type yylex(parser::semantic_type* yylval,
@@ -37,16 +41,10 @@ public:
         loc_.columns(plex_->YYLeng());
         *yylloc = loc_;
 
-        switch (tt) {
-            case parser::token_type::NUMBER:
-                yylval->emplace<int64_t>(std::stoll(plex_->YYText()));
-                break;
-            case parser::token_type::VAR:
-                yylval->emplace<std::string>(plex_->YYText());
-                break;
-            default:
-                break;
-        }
+        if (tt == parser::token_type::NUMBER)
+            yylval->emplace<int64_t>(std::stoll(plex_->YYText()));
+        if (tt == parser::token_type::VAR)
+            yylval->emplace<std::string>(plex_->YYText());
 
         return tt;
     }

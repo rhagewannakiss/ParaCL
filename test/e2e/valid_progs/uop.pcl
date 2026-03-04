@@ -1,0 +1,8 @@
+x = 5;
+y = -x;
+z = +y;
+w = !0;
+
+print y;
+print z;
+print w;

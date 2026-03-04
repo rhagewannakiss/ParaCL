@@ -23,7 +23,7 @@ int parse_and_run(const char* path)
     }
 
     yyFlexLexer lexer(&input);
-    yy::NumDriver driver(&lexer);
+    yy::NumDriver driver(&lexer, path);
 
     try {
         if (!driver.parse())

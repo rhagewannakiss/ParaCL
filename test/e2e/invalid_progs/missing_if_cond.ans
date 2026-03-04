@@ -1,0 +1,2 @@
+test/e2e/invalid_progs/missing_if_cond.pcl:1:4: error: syntax error, unexpected )
+test/e2e/invalid_progs/missing_if_cond.pcl:1:4: error: Missing condition in if
