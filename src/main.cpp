@@ -1,11 +1,13 @@
 #include "Visitors/Interpreter.hpp"
 #include "driver/driver.hpp"
+#include "errors-output/error-formatter.hpp"
 
 #include <FlexLexer.h>
 
 #include <fstream>
 #include <iostream>
 #include <stdexcept>
+#include <string>
 
 namespace {
 
@@ -13,12 +15,15 @@ int parse_and_run(const char* path)
 {
     std::ifstream input(path);
     if (!input.is_open()) {
-        std::cerr << "Failed to open file: " << path << '\n';
+        std::cerr << err::format_error(ast::SourceRange(),
+                                       "Failed to open file: " +
+                                           std::string(path))
+                  << '\n';
         return 1;
     }
 
     yyFlexLexer lexer(&input);
-    yy::NumDriver driver(&lexer);
+    yy::NumDriver driver(&lexer, path);
 
     try {
         if (!driver.parse())
@@ -28,7 +33,9 @@ int parse_and_run(const char* path)
 
         ast::AST ast_tree = driver.get_ast();
         if (ast_tree.root() == nullptr) {
-            std::cerr << "Parser produced empty AST\n";
+            std::cerr << err::format_error(ast::SourceRange(),
+                                           "Parser produced empty AST")
+                      << '\n';
             return 1;
         }
 

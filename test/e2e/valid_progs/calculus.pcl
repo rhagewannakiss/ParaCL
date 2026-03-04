@@ -1,0 +1,12 @@
+a = ?;
+b = ?;
+
+print (a + b);
+print (a - b);
+print (a * b);
+
+if (b != 0) {
+    print a / b;
+} else {
+    print -1;    //if division by zero
+}

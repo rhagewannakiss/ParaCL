@@ -33,6 +33,7 @@ add_library(parser_lib
     STATIC
         ${BISON_Parser_OUTPUTS}
         ${FLEX_Lexer_OUTPUTS}
+        parser/scanner_location_bridge.cpp
 )
 
 target_include_directories(parser_lib

@@ -2,4 +2,5 @@
 missingInclude:*test/*
 unusedFunction:include/AST/AST.hpp
 unusedFunction:include/driver/driver.hpp
+unusedFunction:src/parser/scanner_location_bridge.cpp
 unusedFunction:include/driver/location_utils.hpp
