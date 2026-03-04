@@ -66,28 +66,6 @@ void accept_stmt_if_present(ast::BaseNode* node, ast::Visitor& visitor)
     }
 }
 
-void collect_input_nodes(const ast::BaseNode* node,
-                         std::unordered_set<const ast::InputNode*>& out)
-{
-    if (is_missing_node(node) || is_empty_node(node)) {
-        return;
-    }
-
-    if (node->node_type() == ast::base_node_type::input) {
-        const auto* input = dynamic_cast<const ast::InputNode*>(node);
-        if (!input) {
-            throw std::runtime_error(make_runtime_error(
-                node->location(), "Invalid InputNode in condition"));
-        }
-        out.insert(input);
-        return;
-    }
-
-    for (const auto& child : node->children()) {
-        collect_input_nodes(child.get(), out);
-    }
-}
-
 int64_t read_input_int64_or_throw(const ast::SourceRange& location)
 {
     int64_t value = 0;
@@ -314,16 +292,14 @@ void Interpreter::visit(WhileNode& node)
     require_expr_node(cond, node.location(), "Missing condition");
 
     detail::ScopeGuard scope_guard(table_, node.location());
-    with_loop_input_context(*cond, [&]() {
-        const auto cond_var_name = validate_evaluable_node(
-            *cond, "Invalid condition", evaluable_context::condition);
-        evaluate_loop_condition(*cond, cond_var_name, true);
+    const auto cond_var_name = validate_evaluable_node(
+        *cond, "Invalid condition", evaluable_context::condition);
+    evaluate_loop_condition(*cond, cond_var_name, true);
 
-        while (last_value_) {
-            accept_stmt_if_present(body, *this);
-            evaluate_loop_condition(*cond, cond_var_name, false);
-        }
-    });
+    while (last_value_) {
+        accept_stmt_if_present(body, *this);
+        evaluate_loop_condition(*cond, cond_var_name, false);
+    }
 }
 
 void Interpreter::visit(ForNode& node)
@@ -339,33 +315,19 @@ void Interpreter::visit(ForNode& node)
 
     accept_stmt_if_present(init, *this);
 
-    with_loop_input_context(*cond, [&]() {
-        const auto cond_var_name = validate_evaluable_node(
-            *cond, "Invalid condition", evaluable_context::condition);
-        evaluate_loop_condition(*cond, cond_var_name, true);
+    const auto cond_var_name = validate_evaluable_node(
+        *cond, "Invalid condition", evaluable_context::condition);
+    evaluate_loop_condition(*cond, cond_var_name, true);
 
-        while (last_value_) {
-            accept_stmt_if_present(body, *this);
-            accept_stmt_if_present(step, *this);
-            evaluate_loop_condition(*cond, cond_var_name, false);
-        }
-    });
+    while (last_value_) {
+        accept_stmt_if_present(body, *this);
+        accept_stmt_if_present(step, *this);
+        evaluate_loop_condition(*cond, cond_var_name, false);
+    }
 }
 
 void Interpreter::visit(InputNode& node)
 {
-    if (is_active_loop_condition_input(node)) {
-        if (const auto cached_value = try_get_cached_loop_input(node)) {
-            last_value_ = *cached_value;
-            return;
-        }
-
-        const int64_t value = read_input_int64_or_throw(node.location());
-        cache_loop_input(node, value);
-        last_value_ = value;
-        return;
-    }
-
     last_value_ = read_input_int64_or_throw(node.location());
 }
 
@@ -484,56 +446,6 @@ bool Interpreter::mul_overflow(int64_t lhs, int64_t rhs, int64_t& out)
     return false;
 }
 
-bool Interpreter::is_active_loop_condition_input(const InputNode& node) const
-{
-    if (loop_input_nodes_stack_.empty()) {
-        return false;
-    }
-
-    const auto& loop_input_nodes = loop_input_nodes_stack_.back();
-    return loop_input_nodes.find(&node) != loop_input_nodes.end();
-}
-
-std::optional<int64_t> Interpreter::try_get_cached_loop_input(
-    const InputNode& node) const
-{
-    if (!is_active_loop_condition_input(node) ||
-        loop_input_cache_stack_.empty()) {
-        return std::nullopt;
-    }
-
-    const auto& loop_input_cache = loop_input_cache_stack_.back();
-    const auto cached = loop_input_cache.find(&node);
-    if (cached == loop_input_cache.end()) {
-        return std::nullopt;
-    }
-    return cached->second;
-}
-
-void Interpreter::cache_loop_input(const InputNode& node, int64_t value)
-{
-    if (!is_active_loop_condition_input(node) ||
-        loop_input_cache_stack_.empty()) {
-        return;
-    }
-
-    auto& loop_input_cache = loop_input_cache_stack_.back();
-    loop_input_cache.insert_or_assign(&node, value);
-}
-
-void Interpreter::with_loop_input_context(const BaseNode& condition_root,
-                                          const std::function<void()>& body)
-{
-    push_loop_input_context(condition_root);
-    try {
-        body();
-    } catch (...) {
-        pop_loop_input_context();
-        throw;
-    }
-    pop_loop_input_context();
-}
-
 void Interpreter::evaluate_loop_condition(
     BaseNode& condition,
     const std::optional<std::string>& tracked_var_name,
@@ -548,24 +460,6 @@ void Interpreter::evaluate_loop_condition(
     }
 
     condition.accept(*this);
-}
-
-void Interpreter::push_loop_input_context(const BaseNode& condition_root)
-{
-    LoopInputNodes input_nodes;
-    collect_input_nodes(&condition_root, input_nodes);
-    loop_input_nodes_stack_.push_back(std::move(input_nodes));
-    loop_input_cache_stack_.emplace_back();
-}
-
-void Interpreter::pop_loop_input_context()
-{
-    if (!loop_input_nodes_stack_.empty()) {
-        loop_input_nodes_stack_.pop_back();
-    }
-    if (!loop_input_cache_stack_.empty()) {
-        loop_input_cache_stack_.pop_back();
-    }
 }
 
 std::optional<std::string> Interpreter::validate_evaluable_node(
