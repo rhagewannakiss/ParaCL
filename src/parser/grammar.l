@@ -4,9 +4,9 @@
 %{
 
 #include "grammar.tab.hh"
+#include "driver/scanner_location_bridge.hpp"
 
 #include <iostream>
-
 %}
 
 VAR               [a-zA-Z_][a-zA-Z_0-9]*
@@ -16,9 +16,15 @@ NUMBER            [0-9]+
 
 %%
 
-{NLINE}             {/* skip newlines */}
-"//".*              {/* skip comments */}
-{WS}                {/* skip whitespace */}
+{NLINE}             {
+    yy::scanner_advance_newlines(static_cast<std::size_t>(YYLeng()));
+}
+"//".*              {
+    yy::scanner_advance_columns(static_cast<std::size_t>(YYLeng()));
+}
+{WS}                {
+    yy::scanner_advance_columns(static_cast<std::size_t>(YYLeng()));
+}
 "+"                 { return yy::parser::token_type::PLUS; }
 "-"                 { return yy::parser::token_type::MINUS; }
 "/"                 { return yy::parser::token_type::DIV; }

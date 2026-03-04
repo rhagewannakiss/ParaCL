@@ -1,1 +1,1 @@
-test/e2e/invalid_progs/undefined_var.pcl:1:6: error: Undefined variable: x
+test/e2e/invalid_progs/undefined_var.pcl:1:7: error: Undefined variable: x

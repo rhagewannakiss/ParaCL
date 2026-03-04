@@ -4,12 +4,14 @@
 #include "grammar.tab.hh"
 #include <FlexLexer.h>
 
+#include <cstddef>
 #include <iostream>
 #include <string>
 #include <utility>
 
 #include "AST/AST.hpp"
 #include "driver/location_utils.hpp"
+#include "driver/scanner_location_bridge.hpp"
 #include "errors-output/error-formatter.hpp"
 
 namespace yy {
@@ -36,7 +38,16 @@ public:
     {
         loc_.step();
 
-        parser::token_type tt = static_cast<parser::token_type>(plex_->yylex());
+        auto* prev = scanner_active_driver();
+        scanner_set_active_driver(this);
+        parser::token_type tt;
+        try {
+            tt = static_cast<parser::token_type>(plex_->yylex());
+        } catch (...) {
+            scanner_set_active_driver(prev);
+            throw;
+        }
+        scanner_set_active_driver(prev);
 
         loc_.columns(plex_->YYLeng());
         *yylloc = loc_;
@@ -87,6 +98,24 @@ public:
     const ast::AST& get_ast() const
     {
         return ast_;
+    }
+
+    void advance_columns(std::size_t count)
+    {
+        if (count == 0)
+            return;
+
+        loc_.columns(static_cast<int>(count));
+        loc_.step();
+    }
+
+    void advance_newlines(std::size_t count)
+    {
+        if (count == 0)
+            return;
+
+        loc_.lines(static_cast<int>(count));
+        loc_.step();
     }
 };
 
