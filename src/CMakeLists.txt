@@ -4,7 +4,10 @@ find_package(FLEX REQUIRED)
 BISON_TARGET(Parser parser/grammar.y
         ${CMAKE_CURRENT_BINARY_DIR}/grammar.tab.cc
     DEFINES_FILE
-        ${CMAKE_CURRENT_BINARY_DIR}/grammar.tab.hh)
+        ${CMAKE_CURRENT_BINARY_DIR}/grammar.tab.hh
+    COMPILE_FLAGS
+        "-Wno-conflicts-sr"
+)
 
 FLEX_TARGET(Lexer parser/grammar.l
         ${CMAKE_CURRENT_BINARY_DIR}/lex.yy.cc)
@@ -29,22 +32,38 @@ target_link_libraries(paracl_core
         flags
 )
 
-add_library(parser_lib
-    STATIC
+add_library(parser_generated
+    OBJECT
         ${BISON_Parser_OUTPUTS}
         ${FLEX_Lexer_OUTPUTS}
+)
+
+target_include_directories(parser_generated
+    PRIVATE
+        ${CMAKE_CURRENT_BINARY_DIR}
+        ${FLEX_INCLUDE_DIRS}
+        ${CMAKE_SOURCE_DIR}/include
+)
+
+target_compile_options(parser_generated
+    PRIVATE
+        -w)
+
+add_library(parser_lib
+    STATIC
         parser/scanner_location_bridge.cpp
 )
 
 target_include_directories(parser_lib
-    PUBLIC
+    SYSTEM PUBLIC
         ${CMAKE_CURRENT_BINARY_DIR}
-       ${FLEX_INCLUDE_DIRS}
+        ${FLEX_INCLUDE_DIRS}
 )
 
 target_link_libraries(parser_lib
     PUBLIC
         paracl_core
+        $<TARGET_OBJECTS:parser_generated>
 )
 
 add_executable(paracl_cli

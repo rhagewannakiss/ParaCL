@@ -106,7 +106,7 @@ program: stmts
                 scope->add_statement(std::move($1[i]));
             }
         }
-        driver->set_ast_root(with_loc(std::move(scope), @$, driver));
+        driver->set_ast_root(with_loc(std::move(scope), @$));
     }
 ;
 
@@ -125,12 +125,12 @@ stmts: stmt stmts
 
 stmt: expr SEMICOLON
     {
-        $$ = with_loc(std::make_unique<ast::ExprNode>(std::move($1)), @$, driver);
+        $$ = with_loc(std::make_unique<ast::ExprNode>(std::move($1)), @$);
     }
     | expr error
     {
         error(@2, "No semicolon");
-        $$ = with_loc(std::make_unique<ast::ExprNode>(std::make_unique<ast::ValueNode>(0)), @$, driver);
+        $$ = with_loc(std::make_unique<ast::ExprNode>(std::make_unique<ast::ValueNode>(0)), @$);
     }
     | SEMICOLON
     {
@@ -138,39 +138,39 @@ stmt: expr SEMICOLON
     }
     | VAR SEMICOLON
     {
-        $$ = with_loc(std::make_unique<ast::VarDeclNode>($1), @$, driver);
+        $$ = with_loc(std::make_unique<ast::VarDeclNode>($1), @$);
     }
     | VAR error
     {
         error(@2, "No semicolon");
-        $$ = with_loc(std::make_unique<ast::VarDeclNode>($1), @$, driver);
+        $$ = with_loc(std::make_unique<ast::VarDeclNode>($1), @$);
     }
     | IF LEFT_PAREN expr RIGHT_PAREN stmt %prec XIF
     {
-        $$ = with_loc(std::make_unique<ast::IfNode>(std::move($3), std::move($5)), @$, driver);
+        $$ = with_loc(std::make_unique<ast::IfNode>(std::move($3), std::move($5)), @$);
     }
     | IF LEFT_PAREN error RIGHT_PAREN stmt %prec XIF
     {
         error(@3, "Missing condition in if");
-        $$ = with_loc(std::make_unique<ast::IfNode>(std::make_unique<ast::ValueNode>(0), std::move($5)), @$, driver);
+        $$ = with_loc(std::make_unique<ast::IfNode>(std::make_unique<ast::ValueNode>(0), std::move($5)), @$);
     }
     | IF LEFT_PAREN expr RIGHT_PAREN stmt ELSE stmt
     {
-        $$ = with_loc(std::make_unique<ast::IfNode>(std::move($3), std::move($5), std::move($7)), @$, driver);
+        $$ = with_loc(std::make_unique<ast::IfNode>(std::move($3), std::move($5), std::move($7)), @$);
     }
     | IF LEFT_PAREN error RIGHT_PAREN stmt ELSE stmt
     {
         error(@3, "Missing condition in if-else");
-        $$ = with_loc(std::make_unique<ast::IfNode>(std::make_unique<ast::ValueNode>(0), std::move($5), std::move($7)), @$, driver);
+        $$ = with_loc(std::make_unique<ast::IfNode>(std::make_unique<ast::ValueNode>(0), std::move($5), std::move($7)), @$);
     }
     | WHILE LEFT_PAREN expr RIGHT_PAREN stmt
     {
-        $$ = with_loc(std::make_unique<ast::WhileNode>(std::move($3), std::move($5)), @$, driver);
+        $$ = with_loc(std::make_unique<ast::WhileNode>(std::move($3), std::move($5)), @$);
     }
     | WHILE LEFT_PAREN error RIGHT_PAREN stmt
     {
         error(@3, "Missing condition in while");
-        $$ = with_loc(std::make_unique<ast::WhileNode>(std::make_unique<ast::ValueNode>(0), std::move($5)), @$, driver);
+        $$ = with_loc(std::make_unique<ast::WhileNode>(std::make_unique<ast::ValueNode>(0), std::move($5)), @$);
     }
     | FOR LEFT_PAREN for_init for_cond for_step RIGHT_PAREN stmt
     {
@@ -186,7 +186,7 @@ stmt: expr SEMICOLON
             body = std::move(scope);
         }
 
-        $$ = with_loc(std::make_unique<ast::ForNode>(std::move($3), std::move($4), std::move($5), std::move(body)), @$, driver);
+        $$ = with_loc(std::make_unique<ast::ForNode>(std::move($3), std::move($4), std::move($5), std::move(body)), @$);
     }
     | FOR LEFT_PAREN error RIGHT_PAREN stmt
     {
@@ -203,7 +203,7 @@ stmt: expr SEMICOLON
             body = std::move(scope);
         }
 
-        $$ = with_loc(std::make_unique<ast::ForNode>(nullptr, nullptr, nullptr, std::move(body)), @$, driver);
+        $$ = with_loc(std::make_unique<ast::ForNode>(nullptr, nullptr, nullptr, std::move(body)), @$);
     }
     | LEFT_CURLY_BRACKET stmts RIGHT_CURLY_BRACKET
     {
@@ -213,22 +213,22 @@ stmt: expr SEMICOLON
                 static_cast<ast::ScopeNode*>(scope.get())->add_statement(std::move($2[i]));
             }
         }
-        $$ = with_loc(std::move(scope), @$, driver);
+        $$ = with_loc(std::move(scope), @$);
     }
     | PRINT expr SEMICOLON
     {
-        $$ = with_loc(std::make_unique<ast::PrintNode>(std::move($2)), @$, driver);
+        $$ = with_loc(std::make_unique<ast::PrintNode>(std::move($2)), @$);
     }
     | PRINT expr error
     {
         error(@3, "Missing semicolon in print");
-        $$ = with_loc(std::make_unique<ast::PrintNode>(std::make_unique<ast::ValueNode>(0)), @$, driver);
+        $$ = with_loc(std::make_unique<ast::PrintNode>(std::make_unique<ast::ValueNode>(0)), @$);
     }
 ;
 
 lvalue: VAR
     {
-        $$ = with_loc(std::make_unique<ast::VarNode>($1), @$, driver);
+        $$ = with_loc(std::make_unique<ast::VarNode>($1), @$);
     }
 ;
 
@@ -249,7 +249,7 @@ for_cond: expr SEMICOLON
     | error SEMICOLON
     {
         error(@1, "Missing condition in for");
-        $$ = with_loc(std::make_unique<ast::ValueNode>(0), @$, driver);
+        $$ = with_loc(std::make_unique<ast::ValueNode>(0), @$);
     }
 ;
 
@@ -265,41 +265,41 @@ for_step: for_step_expr
 
 for_step_expr: lvalue ASSIGNMENT expr
     {
-        $$ = with_loc(std::make_unique<ast::AssignNode>(std::move($1), std::move($3)), @$, driver);
+        $$ = with_loc(std::make_unique<ast::AssignNode>(std::move($1), std::move($3)), @$);
     }
 ;
 
 expr: expr PLUS expr
     {
-        $$ = with_loc(std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::add, std::move($1), std::move($3)), @$, driver);
+        $$ = with_loc(std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::add, std::move($1), std::move($3)), @$);
     }
     | error PLUS expr
     {
         error(@1, "Missing left operand");
-        $$ = with_loc(std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::add, std::make_unique<ast::ValueNode>(0), std::move($3)), @$, driver);
+        $$ = with_loc(std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::add, std::make_unique<ast::ValueNode>(0), std::move($3)), @$);
     }
     | expr PLUS error
     {
         error(@3, "Missing right operand");
-        $$ = with_loc(std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::add, std::move($1), std::make_unique<ast::ValueNode>(0)), @$, driver);
+        $$ = with_loc(std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::add, std::move($1), std::make_unique<ast::ValueNode>(0)), @$);
     }
     | expr MINUS expr
     {
-        $$ = with_loc(std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::sub, std::move($1), std::move($3)), @$, driver);
+        $$ = with_loc(std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::sub, std::move($1), std::move($3)), @$);
     }
     | error MINUS expr
     {
         error(@1, "Missing left operand");
-        $$ = with_loc(std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::sub, std::make_unique<ast::ValueNode>(0), std::move($3)), @$, driver);
+        $$ = with_loc(std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::sub, std::make_unique<ast::ValueNode>(0), std::move($3)), @$);
     }
     | expr MINUS error
     {
         error(@3, "Missing right operand");
-        $$ = with_loc(std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::sub, std::move($1), std::make_unique<ast::ValueNode>(0)), @$, driver);
+        $$ = with_loc(std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::sub, std::move($1), std::make_unique<ast::ValueNode>(0)), @$);
     }
     | expr MUL expr
     {
-        $$ = with_loc(std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::mul, std::move($1), std::move($3)), @$, driver);
+        $$ = with_loc(std::make_unique<ast::BinArithOpNode>(ast::bin_arith_op_type::mul, std::move($1), std::move($3)), @$);
     }
     | expr DIV expr
     {
@@ -307,7 +307,7 @@ expr: expr PLUS expr
                 ast::bin_arith_op_type::div,
                 std::move($1),
                 std::move($3)),
-            @$, driver);
+            @$);
     }
     | expr MODULUS expr
     {
@@ -315,55 +315,55 @@ expr: expr PLUS expr
                 ast::bin_arith_op_type::mod,
                 std::move($1),
                 std::move($3)),
-            @$, driver);
+            @$);
     }
     | expr EQUAL expr
     {
-        $$ = with_loc(std::make_unique<ast::BinLogicOpNode>(ast::bin_logic_op_type::equal, std::move($1), std::move($3)), @$, driver);
+        $$ = with_loc(std::make_unique<ast::BinLogicOpNode>(ast::bin_logic_op_type::equal, std::move($1), std::move($3)), @$);
     }
     | expr NOT_EQUAL expr
     {
-        $$ = with_loc(std::make_unique<ast::BinLogicOpNode>(ast::bin_logic_op_type::not_equal, std::move($1), std::move($3)), @$, driver);
+        $$ = with_loc(std::make_unique<ast::BinLogicOpNode>(ast::bin_logic_op_type::not_equal, std::move($1), std::move($3)), @$);
     }
     | expr LESS expr
     {
-        $$ = with_loc(std::make_unique<ast::BinLogicOpNode>(ast::bin_logic_op_type::less, std::move($1), std::move($3)), @$, driver);
+        $$ = with_loc(std::make_unique<ast::BinLogicOpNode>(ast::bin_logic_op_type::less, std::move($1), std::move($3)), @$);
     }
     | expr GREATER expr
     {
-        $$ = with_loc(std::make_unique<ast::BinLogicOpNode>(ast::bin_logic_op_type::greater, std::move($1), std::move($3)), @$, driver);
+        $$ = with_loc(std::make_unique<ast::BinLogicOpNode>(ast::bin_logic_op_type::greater, std::move($1), std::move($3)), @$);
     }
     | expr LESS_OR_EQUAL expr
     {
-        $$ = with_loc(std::make_unique<ast::BinLogicOpNode>(ast::bin_logic_op_type::less_equal, std::move($1), std::move($3)), @$, driver);
+        $$ = with_loc(std::make_unique<ast::BinLogicOpNode>(ast::bin_logic_op_type::less_equal, std::move($1), std::move($3)), @$);
     }
     | expr GREATER_OR_EQUAL expr
     {
-        $$ = with_loc(std::make_unique<ast::BinLogicOpNode>(ast::bin_logic_op_type::greater_equal, std::move($1), std::move($3)), @$, driver);
+        $$ = with_loc(std::make_unique<ast::BinLogicOpNode>(ast::bin_logic_op_type::greater_equal, std::move($1), std::move($3)), @$);
     }
     | expr AND expr
     {
-        $$ = with_loc(std::make_unique<ast::BinLogicOpNode>(ast::bin_logic_op_type::logical_and, std::move($1), std::move($3)), @$, driver);
+        $$ = with_loc(std::make_unique<ast::BinLogicOpNode>(ast::bin_logic_op_type::logical_and, std::move($1), std::move($3)), @$);
     }
     | expr OR expr
     {
-        $$ = with_loc(std::make_unique<ast::BinLogicOpNode>(ast::bin_logic_op_type::logical_or, std::move($1), std::move($3)), @$, driver);
+        $$ = with_loc(std::make_unique<ast::BinLogicOpNode>(ast::bin_logic_op_type::logical_or, std::move($1), std::move($3)), @$);
     }
     | expr XOR expr
     {
-        $$ = with_loc(std::make_unique<ast::BinLogicOpNode>(ast::bin_logic_op_type::bitwise_xor, std::move($1), std::move($3)), @$, driver);
+        $$ = with_loc(std::make_unique<ast::BinLogicOpNode>(ast::bin_logic_op_type::bitwise_xor, std::move($1), std::move($3)), @$);
     }
     | NOT expr
     {
-        $$ = with_loc(std::make_unique<ast::UnOpNode>(ast::unop_node_type::logical_not, std::move($2)), @$, driver);
+        $$ = with_loc(std::make_unique<ast::UnOpNode>(ast::unop_node_type::logical_not, std::move($2)), @$);
     }
     | MINUS expr %prec UMINUS
     {
-        $$ = with_loc(std::make_unique<ast::UnOpNode>(ast::unop_node_type::neg, std::move($2)), @$, driver);
+        $$ = with_loc(std::make_unique<ast::UnOpNode>(ast::unop_node_type::neg, std::move($2)), @$);
     }
     | PLUS expr %prec UMINUS
     {
-        $$ = with_loc(std::make_unique<ast::UnOpNode>(ast::unop_node_type::pos, std::move($2)), @$, driver);
+        $$ = with_loc(std::make_unique<ast::UnOpNode>(ast::unop_node_type::pos, std::move($2)), @$);
     }
     | LEFT_PAREN expr RIGHT_PAREN
     {
@@ -371,19 +371,19 @@ expr: expr PLUS expr
     }
     | NUMBER
     {
-        $$ = with_loc(std::make_unique<ast::ValueNode>($1), @$, driver);
+        $$ = with_loc(std::make_unique<ast::ValueNode>($1), @$);
     }
     | VAR
     {
-        $$ = with_loc(std::make_unique<ast::VarNode>(std::move($1)), @$, driver);
+        $$ = with_loc(std::make_unique<ast::VarNode>(std::move($1)), @$);
     }
     | lvalue ASSIGNMENT expr
     {
-        $$ = with_loc(std::make_unique<ast::AssignNode>(std::move($1), std::move($3)), @$, driver);
+        $$ = with_loc(std::make_unique<ast::AssignNode>(std::move($1), std::move($3)), @$);
     }
     | QUESTION_MARK
     {
-        $$ = with_loc(std::make_unique<ast::InputNode>(), @$, driver);
+        $$ = with_loc(std::make_unique<ast::InputNode>(), @$);
     }
 ;
 
