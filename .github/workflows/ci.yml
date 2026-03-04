@@ -95,7 +95,6 @@ jobs:
             --enable=all \
             --inconclusive \
             --suppress=missingIncludeSystem \
-            --suppress=unmatchedSuppression
             --suppressions-list=.cppcheck-suppress \
             -i build/_deps \
             -i build/src/grammar.tab.cc \
