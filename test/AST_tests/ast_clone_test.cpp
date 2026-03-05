@@ -10,18 +10,72 @@
 #include "gtest/gtest.h"
 
 namespace {
-bool check_node_equality_val(const ast::BaseNode* node1,
-                             const ast::BaseNode* node2)
+
+template<typename T>
+struct const_two_ptrs
 {
-    if (node1 == nullptr) {
-        if (node2 == nullptr) {
-            return true;
-        }
+    const T* va;
+    const T* vb;
+    const bool is_valid;
+};
+
+template<typename T>
+const_two_ptrs<T> check_ptr_equality(const ast::BaseNode* node1,
+                                     const ast::BaseNode* node2)
+{
+    const T* va = dynamic_cast<const T*>(node1);
+    const T* vb = dynamic_cast<const T*>(node2);
+    if (!va || !vb)
+        return { nullptr, nullptr, false };
+    return { va, vb, true };
+}
+
+bool check_node_equality(const ast::BaseNode* node1,
+                         const ast::BaseNode* node2);
+
+template<typename T, typename Comparator>
+bool compare_typed_nodes(const ast::BaseNode* node1,
+                         const ast::BaseNode* node2,
+                         Comparator comparator)
+{
+    const auto ptrs = check_ptr_equality<T>(node1, node2);
+    if (!ptrs.is_valid) {
         return false;
     }
+    return comparator(ptrs.va, ptrs.vb);
+}
 
-    if (node2 == nullptr)
-        return false;
+template<typename T>
+bool compare_leaf_nodes(const ast::BaseNode* node1, const ast::BaseNode* node2)
+{
+    return compare_typed_nodes<T>(
+        node1, node2, [](const T*, const T*) { return true; });
+}
+
+template<typename T>
+bool compare_unary_nodes(const ast::BaseNode* node1, const ast::BaseNode* node2)
+{
+    return compare_typed_nodes<T>(node1, node2, [](const T* a, const T* b) {
+        return a->op() == b->op() &&
+               check_node_equality(a->operand(), b->operand());
+    });
+}
+
+template<typename T>
+bool compare_binary_nodes(const ast::BaseNode* node1,
+                          const ast::BaseNode* node2)
+{
+    return compare_typed_nodes<T>(node1, node2, [](const T* a, const T* b) {
+        return a->op() == b->op() &&
+               check_node_equality(a->left(), b->left()) &&
+               check_node_equality(a->right(), b->right());
+    });
+}
+
+bool check_node_equality(const ast::BaseNode* node1, const ast::BaseNode* node2)
+{
+    if (node1 == nullptr || node2 == nullptr)
+        return node1 == node2;
 
     auto type_1 = node1->node_type();
     auto type_2 = node2->node_type();
@@ -29,133 +83,103 @@ bool check_node_equality_val(const ast::BaseNode* node1,
     if (type_1 != type_2)
         return false;
     switch (type_1) {
-        case ast::base_node_type::value: {
-            auto* va = dynamic_cast<const ast::ValueNode*>(node1);
-            auto* vb = dynamic_cast<const ast::ValueNode*>(node2);
-            if (!va || !vb)
-                return false;
-            return va->value() == vb->value();
-        }
-        case ast::base_node_type::var: {
-            auto* va = dynamic_cast<const ast::VarNode*>(node1);
-            auto* vb = dynamic_cast<const ast::VarNode*>(node2);
-            if (!va || !vb)
-                return false;
-            return va->name() == vb->name();
-        }
-        case ast::base_node_type::unop: {
-            auto* va = dynamic_cast<const ast::UnOpNode*>(node1);
-            auto* vb = dynamic_cast<const ast::UnOpNode*>(node2);
-            if (!va || !vb)
-                return false;
-            bool ops_equal =
-                check_node_equality_val(va->operand(), vb->operand());
-            return va->op() == vb->op() && ops_equal;
-        }
-        case ast::base_node_type::bin_arith_op: {
-            auto* va = dynamic_cast<const ast::BinArithOpNode*>(node1);
-            auto* vb = dynamic_cast<const ast::BinArithOpNode*>(node2);
-            if (!va || !vb)
-                return false;
-            bool ops_equal = check_node_equality_val(va->left(), vb->left()) &&
-                             check_node_equality_val(va->right(), vb->right());
-            return va->op() == vb->op() && ops_equal;
-        }
-        case ast::base_node_type::bin_logic_op: {
-            auto* va = dynamic_cast<const ast::BinLogicOpNode*>(node1);
-            auto* vb = dynamic_cast<const ast::BinLogicOpNode*>(node2);
-            if (!va || !vb)
-                return false;
-            bool ops_equal = check_node_equality_val(va->left(), vb->left()) &&
-                             check_node_equality_val(va->right(), vb->right());
-            return va->op() == vb->op() && ops_equal;
-        }
-        case ast::base_node_type::print: {
-            auto* va = dynamic_cast<const ast::PrintNode*>(node1);
-            auto* vb = dynamic_cast<const ast::PrintNode*>(node2);
-            if (!va || !vb)
-                return false;
-            return check_node_equality_val(va->expr(), vb->expr());
-        }
-        case ast::base_node_type::assign: {
-            auto* va = dynamic_cast<const ast::AssignNode*>(node1);
-            auto* vb = dynamic_cast<const ast::AssignNode*>(node2);
-            if (!va || !vb)
-                return false;
-            return check_node_equality_val(va->lhs(), vb->lhs()) &&
-                   check_node_equality_val(va->rhs(), vb->rhs());
-        }
-        case ast::base_node_type::expr: {
-            auto* va = dynamic_cast<const ast::ExprNode*>(node1);
-            auto* vb = dynamic_cast<const ast::ExprNode*>(node2);
-            if (!va || !vb)
-                return false;
-            return check_node_equality_val(va->expr(), vb->expr());
-        }
-        case ast::base_node_type::if_node: {
-            auto* va = dynamic_cast<const ast::IfNode*>(node1);
-            auto* vb = dynamic_cast<const ast::IfNode*>(node2);
-            if (!va || !vb)
-                return false;
-            return check_node_equality_val(va->condition(), vb->condition()) &&
-                   check_node_equality_val(va->then_branch(),
-                                           vb->then_branch()) &&
-                   check_node_equality_val(va->else_branch(),
-                                           vb->else_branch());
-        }
-        case ast::base_node_type::while_node: {
-            auto* va = dynamic_cast<const ast::WhileNode*>(node1);
-            auto* vb = dynamic_cast<const ast::WhileNode*>(node2);
-            if (!va || !vb)
-                return false;
-            return check_node_equality_val(va->condition(), vb->condition()) &&
-                   check_node_equality_val(va->body(), vb->body());
-        }
-        case ast::base_node_type::for_node: {
-            auto* va = dynamic_cast<const ast::ForNode*>(node1);
-            auto* vb = dynamic_cast<const ast::ForNode*>(node2);
-            if (!va || !vb)
-                return false;
-            return check_node_equality_val(va->get_init(), vb->get_init()) &&
-                   check_node_equality_val(va->get_cond(), vb->get_cond()) &&
-                   check_node_equality_val(va->get_step(), vb->get_step()) &&
-                   check_node_equality_val(va->get_body(), vb->get_body());
-        }
-        case ast::base_node_type::input: {
-            auto* va = dynamic_cast<const ast::InputNode*>(node1);
-            auto* vb = dynamic_cast<const ast::InputNode*>(node2);
-            if (!va || !vb)
-                return false;
-            return va->children().empty() && vb->children().empty();
-        }
-        case ast::base_node_type::scope: {
-            auto* va = dynamic_cast<const ast::ScopeNode*>(node1);
-            auto* vb = dynamic_cast<const ast::ScopeNode*>(node2);
-            if (!va || !vb)
-                return false;
-            const auto& ca = va->statements();
-            const auto& cb = vb->statements();
-            if (ca.size() != cb.size())
-                return false;
-            for (size_t i = 0; i < ca.size(); ++i) {
-                if (!check_node_equality_val(ca[i].get(), cb[i].get()))
-                    return false;
-            }
-            return true;
-        }
-        case ast::base_node_type::var_decl: {
-            auto* va = dynamic_cast<const ast::VarDeclNode*>(node1);
-            auto* vb = dynamic_cast<const ast::VarDeclNode*>(node2);
-            if (!va || !vb)
-                return false;
-            const auto& na = va->name();
-            const auto& nb = vb->name();
-            if (na != nb)
-                return false;
-            const auto ia = va->init_expr();
-            const auto ib = vb->init_expr();
-            return check_node_equality_val(ia, ib);
-        }
+        case ast::base_node_type::value:
+            return compare_typed_nodes<ast::ValueNode>(
+                node1,
+                node2,
+                [](const ast::ValueNode* a, const ast::ValueNode* b) {
+                    return a->value() == b->value();
+                });
+        case ast::base_node_type::var:
+            return compare_typed_nodes<ast::VarNode>(
+                node1, node2, [](const ast::VarNode* a, const ast::VarNode* b) {
+                    return a->name() == b->name();
+                });
+        case ast::base_node_type::unop:
+            return compare_unary_nodes<ast::UnOpNode>(node1, node2);
+        case ast::base_node_type::bin_arith_op:
+            return compare_binary_nodes<ast::BinArithOpNode>(node1, node2);
+        case ast::base_node_type::bin_logic_op:
+            return compare_binary_nodes<ast::BinLogicOpNode>(node1, node2);
+        case ast::base_node_type::print:
+            return compare_typed_nodes<ast::PrintNode>(
+                node1,
+                node2,
+                [](const ast::PrintNode* a, const ast::PrintNode* b) {
+                    return check_node_equality(a->expr(), b->expr());
+                });
+        case ast::base_node_type::assign:
+            return compare_typed_nodes<ast::AssignNode>(
+                node1,
+                node2,
+                [](const ast::AssignNode* a, const ast::AssignNode* b) {
+                    return check_node_equality(a->lhs(), b->lhs()) &&
+                           check_node_equality(a->rhs(), b->rhs());
+                });
+        case ast::base_node_type::expr:
+            return compare_typed_nodes<ast::ExprNode>(
+                node1,
+                node2,
+                [](const ast::ExprNode* a, const ast::ExprNode* b) {
+                    return check_node_equality(a->expr(), b->expr());
+                });
+        case ast::base_node_type::if_node:
+            return compare_typed_nodes<ast::IfNode>(
+                node1, node2, [](const ast::IfNode* a, const ast::IfNode* b) {
+                    return check_node_equality(a->condition(),
+                                               b->condition()) &&
+                           check_node_equality(a->then_branch(),
+                                               b->then_branch()) &&
+                           check_node_equality(a->else_branch(),
+                                               b->else_branch());
+                });
+        case ast::base_node_type::while_node:
+            return compare_typed_nodes<ast::WhileNode>(
+                node1,
+                node2,
+                [](const ast::WhileNode* a, const ast::WhileNode* b) {
+                    return check_node_equality(a->condition(),
+                                               b->condition()) &&
+                           check_node_equality(a->body(), b->body());
+                });
+        case ast::base_node_type::for_node:
+            return compare_typed_nodes<ast::ForNode>(
+                node1, node2, [](const ast::ForNode* a, const ast::ForNode* b) {
+                    return check_node_equality(a->get_init(), b->get_init()) &&
+                           check_node_equality(a->get_cond(), b->get_cond()) &&
+                           check_node_equality(a->get_step(), b->get_step()) &&
+                           check_node_equality(a->get_body(), b->get_body());
+                });
+        case ast::base_node_type::input:
+            return compare_leaf_nodes<ast::InputNode>(node1, node2);
+        case ast::base_node_type::scope:
+            return compare_typed_nodes<ast::ScopeNode>(
+                node1,
+                node2,
+                [](const ast::ScopeNode* a, const ast::ScopeNode* b) {
+                    const auto& ca = a->statements();
+                    const auto& cb = b->statements();
+                    if (ca.size() != cb.size())
+                        return false;
+                    for (size_t i = 0; i < ca.size(); ++i) {
+                        if (!check_node_equality(ca[i].get(), cb[i].get()))
+                            return false;
+                    }
+                    return true;
+                });
+        case ast::base_node_type::var_decl:
+            return compare_typed_nodes<ast::VarDeclNode>(
+                node1,
+                node2,
+                [](const ast::VarDeclNode* a, const ast::VarDeclNode* b) {
+                    if (a->name() != b->name())
+                        return false;
+                    return check_node_equality(a->init_expr(), b->init_expr());
+                });
+        case ast::base_node_type::err:
+            return compare_leaf_nodes<ast::ErrorNode>(node1, node2);
+        case ast::base_node_type::empty:
+            return compare_leaf_nodes<ast::EmptyNode>(node1, node2);
         case ast::base_node_type::base:
         default:
             return false;
@@ -180,7 +204,7 @@ tst check_equality_values(const ast::AST& ast1, const ast::AST& ast2)
         return tst::same_pointers;
     }
 
-    if (check_node_equality_val(ast1.root(), ast2.root())) {
+    if (check_node_equality(ast1.root(), ast2.root())) {
         return tst::equal;
     }
 
@@ -326,4 +350,18 @@ TEST(ASTCloneTest, AssignmentIndependence)
 
     EXPECT_NE(original.root(), assigned.root());
     EXPECT_EQ(check_equality_values(original, assigned), tst::equal);
+}
+
+TEST(ASTCloneTest, ErrorAndEmptyNodesCloneEquality)
+{
+    std::vector<ast::BaseNode::NodePtr> stmts;
+    stmts.push_back(std::make_unique<ast::ErrorNode>());
+    stmts.push_back(std::make_unique<ast::EmptyNode>());
+
+    auto root = std::make_unique<ast::ScopeNode>(std::move(stmts));
+    ast::AST ast(std::move(root));
+    ast::AST cloned(ast);
+
+    EXPECT_NE(ast.root(), cloned.root());
+    EXPECT_EQ(check_equality_values(ast, cloned), tst::equal);
 }
