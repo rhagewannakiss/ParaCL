@@ -18,8 +18,7 @@ inline ast::SourceRange to_source_range(const yy::parser::location_type& loc)
 }
 
 inline ast::BaseNode::NodePtr with_loc(ast::BaseNode::NodePtr node,
-                                       const yy::parser::location_type& loc,
-                                       yy::NumDriver* driver)
+                                       const yy::parser::location_type& loc)
 {
     if (node) {
         node->set_location(to_source_range(loc));

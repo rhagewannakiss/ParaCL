@@ -3,6 +3,7 @@
 #include "gtest/gtest.h"
 #include <memory>
 #include <sstream>
+#include <stdexcept>
 
 namespace {
 
@@ -19,6 +20,17 @@ std::string RunAndCapture(ast::BaseNode& node)
     }
     std::cout.rdbuf(old);
     return out.str();
+}
+
+std::string CaptureRuntimeError(ast::BaseNode& node)
+{
+    ast::Interpreter interpreter;
+    try {
+        node.accept(interpreter);
+    } catch (const std::runtime_error& ex) {
+        return ex.what();
+    }
+    return "";
 }
 
 class ScopedCinInput
@@ -116,6 +128,21 @@ TEST(InputNodeUnitTest, CheckAvailableNodesForInput)
         ast::InputNode node;
         EXPECT_THROW(node.accept(interpreter), std::runtime_error);
     }
+}
+
+TEST(DiagnosticsTest, RuntimeErrorsUseGnuFormat)
+{
+    ScopedCinInput input("abc\n");
+    ast::InputNode node;
+
+    ast::SourceRange range;
+    range.file = "runtime.pcl";
+    range.begin_line = 4;
+    range.begin_column = 2;
+    node.set_location(range);
+
+    EXPECT_EQ(CaptureRuntimeError(node),
+              "runtime.pcl:4:2: error: Input error: expected int64_t");
 }
 
 inline ast::BaseNode::NodePtr MakeThenExpr()

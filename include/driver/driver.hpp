@@ -4,13 +4,15 @@
 #include "grammar.tab.hh"
 #include <FlexLexer.h>
 
+#include <cstddef>
 #include <iostream>
-#include <map>
 #include <string>
-#include <vector>
+#include <utility>
 
 #include "AST/AST.hpp"
 #include "driver/location_utils.hpp"
+#include "driver/scanner_location_bridge.hpp"
+#include "errors-output/error-formatter.hpp"
 
 namespace yy {
 
@@ -18,14 +20,17 @@ class NumDriver
 {
 private:
     FlexLexer* plex_;
+    std::string filename_;
     location loc_;
     ast::AST ast_;
     int error_cnt_ = 0;
 
 public:
-    explicit NumDriver(FlexLexer* plex)
+    explicit NumDriver(FlexLexer* plex, std::string fn = "")
       : plex_(plex)
+      , filename_(std::move(fn))
     {
+        loc_.initialize(&filename_);
     }
 
     parser::token_type yylex(parser::semantic_type* yylval,
@@ -33,21 +38,24 @@ public:
     {
         loc_.step();
 
-        parser::token_type tt = static_cast<parser::token_type>(plex_->yylex());
+        auto* prev = scanner_active_driver();
+        scanner_set_active_driver(this);
+        parser::token_type tt;
+        try {
+            tt = static_cast<parser::token_type>(plex_->yylex());
+        } catch (...) {
+            scanner_set_active_driver(prev);
+            throw;
+        }
+        scanner_set_active_driver(prev);
 
         loc_.columns(plex_->YYLeng());
         *yylloc = loc_;
 
-        switch (tt) {
-            case parser::token_type::NUMBER:
-                yylval->emplace<int64_t>(std::stoll(plex_->YYText()));
-                break;
-            case parser::token_type::VAR:
-                yylval->emplace<std::string>(plex_->YYText());
-                break;
-            default:
-                break;
-        }
+        if (tt == parser::token_type::NUMBER)
+            yylval->emplace<int64_t>(std::stoll(plex_->YYText()));
+        if (tt == parser::token_type::VAR)
+            yylval->emplace<std::string>(plex_->YYText());
 
         return tt;
     }
@@ -55,11 +63,7 @@ public:
     void add_error(const location& loc, const std::string& msg)
     {
         auto range = to_source_range(loc);
-        if (!range.file.empty()) {
-            std::cerr << range.file << ":";
-        }
-        std::cerr << "Error at " << loc.begin.line << ":" << loc.begin.column
-                  << ": " << msg << std::endl;
+        std::cerr << err::format_error(range, msg) << std::endl;
         error_cnt_++;
     }
 
@@ -94,6 +98,24 @@ public:
     const ast::AST& get_ast() const
     {
         return ast_;
+    }
+
+    void advance_columns(std::size_t count)
+    {
+        if (count == 0)
+            return;
+
+        loc_.columns(static_cast<int>(count));
+        loc_.step();
+    }
+
+    void advance_newlines(std::size_t count)
+    {
+        if (count == 0)
+            return;
+
+        loc_.lines(static_cast<int>(count));
+        loc_.step();
     }
 };
 
