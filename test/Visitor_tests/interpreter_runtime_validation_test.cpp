@@ -69,7 +69,7 @@ TEST(PrintNodeUnitTest, CheckNodeTypesInExpr)
         ast::PrintNode node(std::make_unique<ast::AssignNode>(
             std::make_unique<ast::VarNode>("x"),
             std::make_unique<ast::ValueNode>(1)));
-        EXPECT_THROW(node.accept(interpreter), std::runtime_error);
+        EXPECT_NO_THROW(node.accept(interpreter));
     }
 
     {

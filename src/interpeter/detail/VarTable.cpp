@@ -26,7 +26,7 @@ void VarTable::leave_scope(const SourceRange& loc)
 
 void VarTable::declare_in_cur_scope(const std::string& name,
                                     int64_t value,
-                                    SourceRange loc)
+                                    const SourceRange& loc)
 {
     auto& cur = scopes_.back();
     const auto iter = cur.find(name);
@@ -37,7 +37,7 @@ void VarTable::declare_in_cur_scope(const std::string& name,
     cur[name] = value;
 }
 
-int64_t VarTable::lookup(const std::string& name, SourceRange loc)
+int64_t VarTable::lookup(const std::string& name, const SourceRange& loc)
 {
     for (size_t i = scopes_.size(); i-- > 0;) {
         auto& cur = scopes_[i];
