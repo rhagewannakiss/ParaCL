@@ -49,8 +49,6 @@ int64_t VarTable::lookup(const std::string& name, const SourceRange& loc)
 
     throw std::runtime_error(
         err::format_error(loc, "Undefined variable: " + name));
-
-    return 0;
 }
 
 void VarTable::assign_or_create(const std::string& name, int64_t value)
