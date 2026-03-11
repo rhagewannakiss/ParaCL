@@ -75,7 +75,7 @@ void SemanticChecker::visit(AssignNode& node)
         addError(node.location(),
                  "Left-hand side of assignment must be a variable");
     } else {
-        auto* var = static_cast<VarNode*>(lhs);
+        const auto* var = static_cast<VarNode*>(lhs);
         if (!isDeclared(var->name())) {
             declareVariable(var->name(), var->location());
         }
