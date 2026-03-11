@@ -459,10 +459,6 @@ std::optional<std::string> Interpreter::validate_evaluable_node(
     evaluable_context context)
 {
     if (node.node_type() == base_node_type::assign) {
-        if (context != evaluable_context::condition) {
-            throw std::runtime_error(
-                err::format_error(node.location(), error_msg));
-        }
 
         const auto* assign = dynamic_cast<const AssignNode*>(&node);
         if (!assign || is_missing_or_empty_expr_node(assign->lhs())) {
