@@ -1,4 +1,5 @@
 #include "Visitors/Interpreter.hpp"
+#include "Visitors/SemanticChecker.hpp"
 #include "driver/driver.hpp"
 #include "errors-output/error-formatter.hpp"
 
@@ -36,6 +37,13 @@ int parse_and_run(const char* path)
             std::cerr << err::format_error(ast::SourceRange(),
                                            "Parser produced empty AST")
                       << '\n';
+            return 1;
+        }
+
+        ast::SemanticChecker checker;
+        checker.check(ast_tree.root());
+        if (checker.hasErrors()) {
+            checker.printErrors(std::cerr);
             return 1;
         }
 
