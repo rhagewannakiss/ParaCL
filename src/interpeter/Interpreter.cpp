@@ -254,7 +254,7 @@ void Interpreter::visit(AssignNode& node)
 
 void Interpreter::visit(VarNode& node)
 {
-    last_value_ = table_.lookup(node.name(), node.location());
+    last_value_ = table_.lookup(node.name());
 }
 
 void Interpreter::visit(IfNode& node)
@@ -446,7 +446,7 @@ void Interpreter::evaluate_loop_condition(
         if (initialize_tracked_var) {
             condition.accept(*this);
         }
-        last_value_ = table_.lookup(*tracked_var_name, condition.location());
+        last_value_ = table_.lookup(*tracked_var_name);
         return;
     }
 

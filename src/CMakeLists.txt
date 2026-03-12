@@ -18,6 +18,7 @@ ADD_FLEX_BISON_DEPENDENCY(Lexer Parser)
 add_library(paracl_core
     STATIC
         interpeter/Interpreter.cpp
+        interpeter/SemanticChecker.cpp
         interpeter/detail/ScopeGuard.cpp
         interpeter/detail/VarTable.cpp
 )

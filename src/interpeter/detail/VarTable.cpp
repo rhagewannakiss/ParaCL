@@ -46,6 +46,7 @@ int64_t VarTable::lookup(const std::string& name, const SourceRange& loc)
             return iter->second;
         }
     }
+
     throw std::runtime_error(
         err::format_error(loc, "Undefined variable: " + name));
 }
