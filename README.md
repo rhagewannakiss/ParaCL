@@ -67,11 +67,6 @@ With stdin:
 
 ### Run Google-tests:
 ```sh
-cd build
-ctest --output-on-failure
-```
-Alternative from project root:
-```sh
 ctest --test-dir build --output-on-failure
 ```
 
