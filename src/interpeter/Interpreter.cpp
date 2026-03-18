@@ -254,7 +254,7 @@ void Interpreter::visit(AssignNode& node)
 
 void Interpreter::visit(VarNode& node)
 {
-    last_value_ = table_.lookup(node.name(), node.location());
+    last_value_ = table_.lookup(node.name());
 }
 
 void Interpreter::visit(IfNode& node)
@@ -446,7 +446,7 @@ void Interpreter::evaluate_loop_condition(
         if (initialize_tracked_var) {
             condition.accept(*this);
         }
-        last_value_ = table_.lookup(*tracked_var_name, condition.location());
+        last_value_ = table_.lookup(*tracked_var_name);
         return;
     }
 
@@ -459,10 +459,6 @@ std::optional<std::string> Interpreter::validate_evaluable_node(
     evaluable_context context)
 {
     if (node.node_type() == base_node_type::assign) {
-        if (context != evaluable_context::condition) {
-            throw std::runtime_error(
-                err::format_error(node.location(), error_msg));
-        }
 
         const auto* assign = dynamic_cast<const AssignNode*>(&node);
         if (!assign || is_missing_or_empty_expr_node(assign->lhs())) {

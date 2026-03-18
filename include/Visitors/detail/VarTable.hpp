@@ -22,9 +22,9 @@ public:
 
     void declare_in_cur_scope(const std::string& name,
                               int64_t value = 0,
-                              SourceRange loc = {});
+                              const SourceRange& loc = {});
 
-    int64_t lookup(const std::string& name, SourceRange loc = {});
+    int64_t lookup(const std::string& name, const SourceRange& loc = {});
     void assign_or_create(const std::string& name, int64_t value);
 };
 
