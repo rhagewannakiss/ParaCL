@@ -35,6 +35,11 @@ add_library(parser_generated
         ${FLEX_Lexer_OUTPUTS}
 )
 
+target_compile_features(parser_generated
+    PRIVATE
+        cxx_std_20
+)
+
 target_include_directories(parser_generated
     PRIVATE
         ${CMAKE_CURRENT_BINARY_DIR}

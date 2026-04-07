@@ -1,6 +1,7 @@
 #pragma once
 
 #include <AST/AST.hpp>
+#include <format>
 #include <string>
 #include <string_view>
 
@@ -9,13 +10,9 @@ inline std::string format_error(const ast::SourceRange& loc,
                                 std::string_view message)
 {
     const std::string location = loc.make_string();
-    std::string prefix;
     if (location.empty()) {
-        prefix = "error: ";
-    } else {
-        prefix = location + ": error: ";
+        return std::format("error: {}", message);
     }
-    prefix += message;
-    return prefix;
+    return std::format("{}: error: {}", location, message);
 }
 } // namespace err
