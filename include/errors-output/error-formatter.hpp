@@ -1,15 +1,21 @@
 #pragma once
 
 #include <AST/AST.hpp>
+#include <string>
+#include <string_view>
 
 namespace err {
 inline std::string format_error(const ast::SourceRange& loc,
-                                const std::string& message)
+                                std::string_view message)
 {
     const std::string location = loc.make_string();
+    std::string prefix;
     if (location.empty()) {
-        return "error: " + message;
+        prefix = "error: ";
+    } else {
+        prefix = location + ": error: ";
     }
-    return location + ": error: " + message;
+    prefix += message;
+    return prefix;
 }
 } // namespace err

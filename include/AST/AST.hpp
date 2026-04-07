@@ -9,6 +9,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace ast {
@@ -494,7 +495,7 @@ public:
     VarNode(VarNode&& other) noexcept = default;
     VarNode& operator=(VarNode&& other) noexcept = default;
 
-    const std::string& name() const&
+    std::string_view name() const&
     {
         return name_;
     }
@@ -1414,7 +1415,7 @@ public:
         }
     }
 
-    const std::string& name() const&
+    std::string_view name() const&
     {
         return name_;
     }

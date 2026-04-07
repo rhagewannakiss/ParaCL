@@ -3,6 +3,7 @@
 #include <ostream>
 #include <sstream>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 
 #include "Visitors/Visitor.hpp"
@@ -128,7 +129,7 @@ public:
 
     void visit(VarDeclNode& node) override
     {
-        emit_node(node, "var_decl " + node.name());
+        emit_node(node, std::string("var_decl ") + std::string(node.name()));
         emit_edges(node);
         const auto& init_expr = node.init_expr();
         if (init_expr != nullptr)
@@ -188,7 +189,7 @@ private:
     }
 
     template<typename NodeT>
-    void emit_node(NodeT& node, const std::string& payload)
+    void emit_node(NodeT& node, std::string_view payload)
     {
         out_ << "  " << id_for(&node) << " [shape=box,label=\""
              << node_type_name(node.node_type()) << "\\n"

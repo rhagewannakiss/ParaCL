@@ -2,6 +2,7 @@
 
 #include <cstdint>
 #include <string>
+#include <string_view>
 #include <unordered_map>
 #include <vector>
 
@@ -20,12 +21,12 @@ public:
     void enter_scope();
     void leave_scope(const SourceRange& loc = {});
 
-    void declare_in_cur_scope(const std::string& name,
+    void declare_in_cur_scope(std::string_view name,
                               int64_t value = 0,
                               const SourceRange& loc = {});
 
-    int64_t lookup(const std::string& name, const SourceRange& loc = {});
-    void assign_or_create(const std::string& name, int64_t value);
+    int64_t lookup(std::string_view name, const SourceRange& loc = {});
+    void assign_or_create(std::string_view name, int64_t value);
 };
 
 } // namespace ast

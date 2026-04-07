@@ -7,6 +7,7 @@
 #include <cstddef>
 #include <iostream>
 #include <string>
+#include <string_view>
 #include <utility>
 
 #include "AST/AST.hpp"
@@ -60,7 +61,7 @@ public:
         return tt;
     }
 
-    void add_error(const location& loc, const std::string& msg)
+    void add_error(const location& loc, std::string_view msg)
     {
         auto range = to_source_range(loc);
         std::cerr << err::format_error(range, msg) << std::endl;

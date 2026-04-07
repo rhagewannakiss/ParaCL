@@ -4,6 +4,7 @@
 #include "Visitors/Visitor.hpp"
 #include <set>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace ast {
@@ -45,9 +46,9 @@ private:
 
     void enterScope();
     void leaveScope(const SourceRange& loc);
-    void declareVariable(const std::string& name, const SourceRange& loc);
-    bool isDeclared(const std::string& name) const;
-    void addError(const SourceRange& loc, const std::string& msg);
+    void declareVariable(std::string_view name, const SourceRange& loc);
+    bool isDeclared(std::string_view name) const;
+    void addError(const SourceRange& loc, std::string_view msg);
 };
 
 } // namespace ast

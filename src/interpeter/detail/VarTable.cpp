@@ -24,44 +24,47 @@ void VarTable::leave_scope(const SourceRange& loc)
     scopes_.pop_back();
 }
 
-void VarTable::declare_in_cur_scope(const std::string& name,
+void VarTable::declare_in_cur_scope(std::string_view name,
                                     int64_t value,
                                     const SourceRange& loc)
 {
+    const std::string key(name);
     auto& cur = scopes_.back();
-    const auto iter = cur.find(name);
+    const auto iter = cur.find(key);
     if (iter != cur.end()) {
         throw std::runtime_error(
-            err::format_error(loc, "Variable " + name + " already declared"));
+            err::format_error(loc, "Variable " + key + " already declared"));
     }
-    cur[name] = value;
+    cur[key] = value;
 }
 
-int64_t VarTable::lookup(const std::string& name, const SourceRange& loc)
+int64_t VarTable::lookup(std::string_view name, const SourceRange& loc)
 {
+    const std::string key(name);
     for (size_t i = scopes_.size(); i-- > 0;) {
         auto& cur = scopes_[i];
-        const auto iter = cur.find(name);
+        const auto iter = cur.find(key);
         if (iter != cur.end()) {
             return iter->second;
         }
     }
 
     throw std::runtime_error(
-        err::format_error(loc, "Undefined variable: " + name));
+        err::format_error(loc, "Undefined variable: " + key));
 }
 
-void VarTable::assign_or_create(const std::string& name, int64_t value)
+void VarTable::assign_or_create(std::string_view name, int64_t value)
 {
+    const std::string key(name);
     for (size_t i = scopes_.size(); i-- > 0;) {
         auto& cur = scopes_[i];
-        const auto iter = cur.find(name);
+        const auto iter = cur.find(key);
         if (iter != cur.end()) {
             iter->second = value;
             return;
         }
     }
-    scopes_.back()[name] = value;
+    scopes_.back()[key] = value;
 }
 
 } // namespace ast
