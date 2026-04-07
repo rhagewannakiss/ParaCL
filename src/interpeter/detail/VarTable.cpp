@@ -1,6 +1,7 @@
 #include "Visitors/detail/VarTable.hpp"
 #include "errors-output/error-formatter.hpp"
 
+#include <cassert>
 #include <stdexcept>
 
 namespace ast {
@@ -17,9 +18,11 @@ void VarTable::enter_scope()
 
 void VarTable::leave_scope(const SourceRange& loc)
 {
+    (void)loc;
+    assert(scopes_.size() > 1 &&
+           "Trying to leave from global scope in VarTable::leave_scope");
     if (scopes_.size() <= 1) {
-        throw std::runtime_error(
-            err::format_error(loc, "Trying to leave from global scope"));
+        return;
     }
     scopes_.pop_back();
 }
