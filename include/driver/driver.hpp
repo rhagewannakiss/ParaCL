@@ -85,7 +85,7 @@ public:
         loc_.step();
     }
 
-    const location& get_location() const
+    const location& get_location() const&
     {
         return loc_;
     }
@@ -95,7 +95,7 @@ public:
         ast_.set_root(std::move(root));
     }
 
-    const ast::AST& get_ast() const
+    const ast::AST& get_ast() const&
     {
         return ast_;
     }
