@@ -1,178 +1,55 @@
-include(FetchContent)
+find_package(GTest REQUIRED)
+include(GoogleTest)
 
-set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+function(add_paracl_unittest source_file)
+    set(options USE_PARSER_LIB)
+    cmake_parse_arguments(ARG "${options}" "" "" ${ARGN})
 
-FetchContent_Declare(
-    googletest
-    URL https://github.com/google/googletest/archive/refs/tags/v1.17.0.zip
-)
+    get_filename_component(test_name "${source_file}" NAME_WE)
 
-FetchContent_MakeAvailable(googletest)
+    add_executable("${test_name}" "${source_file}")
 
-add_executable(ast_clone_test
+    if(ARG_USE_PARSER_LIB)
+        target_link_libraries("${test_name}"
+            PRIVATE
+                parser_lib
+                GTest::gtest_main
+        )
+    else()
+        target_link_libraries("${test_name}"
+            PRIVATE
+                paracl_core
+                GTest::gtest_main
+        )
+    endif()
+
+    add_paracl_compile_options("${test_name}")
+    gtest_discover_tests("${test_name}")
+endfunction()
+
+set(PARACL_CORE_TESTS
     AST_tests/ast_clone_test.cpp
-)
-
-target_link_libraries(ast_clone_test
-    PRIVATE
-        paracl_core
-        flags_test
-        GTest::gtest_main
-)
-
-add_executable(ast_print_test
     AST_tests/ast_print_test.cpp
-)
-
-target_link_libraries(ast_print_test
-    PRIVATE
-        paracl_core
-        flags_test
-)
-
-add_executable(ast_nodes_test
     AST_tests/ast_nodes_test.cpp
-)
 
-target_link_libraries(ast_nodes_test
-    PRIVATE
-        paracl_core
-        flags_test
-        GTest::gtest_main
-)
-
-add_executable(error_formatter_test
-    AST_tests/error_formatter_test.cpp
-)
-
-target_link_libraries(error_formatter_test
-    PRIVATE
-        paracl_core
-        flags_test
-        GTest::gtest_main
-)
-
-add_executable(interpreter_runtime_validation_test
     Visitor_tests/interpreter_runtime_validation_test.cpp
-)
-
-target_link_libraries(interpreter_runtime_validation_test
-    PRIVATE
-        paracl_core
-        flags_test
-        GTest::gtest_main
-)
-
-add_executable(interpreter_expr_test
     Visitor_tests/interpreter_expr_test.cpp
-)
-
-target_link_libraries(interpreter_expr_test
-    PRIVATE
-        paracl_core
-        flags_test
-        GTest::gtest_main
-)
-
-add_executable(interpreter_expr_errors_test
     Visitor_tests/interpreter_expr_errors_test.cpp
-)
-
-target_link_libraries(interpreter_expr_errors_test
-    PRIVATE
-        paracl_core
-        flags_test
-        GTest::gtest_main
-)
-
-add_executable(interpreter_short_circuit_test
     Visitor_tests/interpreter_short_circuit_test.cpp
-)
-
-target_link_libraries(interpreter_short_circuit_test
-    PRIVATE
-        paracl_core
-        flags_test
-        GTest::gtest_main
-)
-
-add_executable(interpreter_control_flow_test
     Visitor_tests/interpreter_control_flow_test.cpp
-)
-
-target_link_libraries(interpreter_control_flow_test
-    PRIVATE
-        paracl_core
-        flags_test
-        GTest::gtest_main
-)
-
-add_executable(interpreter_stmt_test
     Visitor_tests/interpreter_stmt_test.cpp
-)
-
-target_link_libraries(interpreter_stmt_test
-    PRIVATE
-        paracl_core
-        flags_test
-        GTest::gtest_main
-)
-
-add_executable(dot_visitor_test
     Visitor_tests/dot_visitor_test.cpp
 )
 
-target_link_libraries(dot_visitor_test
-    PRIVATE
-        paracl_core
-        flags_test
-        GTest::gtest_main
-)
-
-add_executable(lexer_test
+set(PARACL_PARSER_TESTS
     Parser_tests/lexer_test.cpp
-)
-
-target_link_libraries(lexer_test
-    PRIVATE
-        GTest::gtest_main
-        flags_test
-        parser_lib
-        paracl_core
-)
-
-target_include_directories(lexer_test
-    PRIVATE
-        ${CMAKE_SOURCE_DIR}/include
-)
-
-add_executable(parser_test
     Parser_tests/parser_test.cpp
 )
 
-target_link_libraries(parser_test
-    PRIVATE
-        GTest::gtest_main
-        flags_test
-        parser_lib
-        paracl_core
-)
+foreach(test_src IN LISTS PARACL_CORE_TESTS)
+    add_paracl_unittest("${test_src}")
+endforeach()
 
-target_include_directories(parser_test
-    PRIVATE
-        ${CMAKE_SOURCE_DIR}/include
-)
-
-include(GoogleTest)
-gtest_discover_tests(ast_clone_test)
-gtest_discover_tests(ast_nodes_test)
-gtest_discover_tests(error_formatter_test)
-gtest_discover_tests(interpreter_runtime_validation_test)
-gtest_discover_tests(interpreter_expr_test)
-gtest_discover_tests(interpreter_expr_errors_test)
-gtest_discover_tests(interpreter_short_circuit_test)
-gtest_discover_tests(interpreter_control_flow_test)
-gtest_discover_tests(interpreter_stmt_test)
-gtest_discover_tests(dot_visitor_test)
-gtest_discover_tests(lexer_test)
-gtest_discover_tests(parser_test)
+foreach(test_src IN LISTS PARACL_PARSER_TESTS)
+    add_paracl_unittest("${test_src}" USE_PARSER_LIB)
+endforeach()

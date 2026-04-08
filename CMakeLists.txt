@@ -4,7 +4,8 @@ project(ParaCL)
 
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-add_subdirectory(flags)
+include(flags/CMakeLists.txt)
+
 add_subdirectory(src)
 
 enable_testing()

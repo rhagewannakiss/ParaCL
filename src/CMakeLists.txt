@@ -26,11 +26,7 @@ add_library(paracl_core
 target_include_directories(paracl_core
     PUBLIC
         ${CMAKE_SOURCE_DIR}/include
-)
-
-target_link_libraries(paracl_core
-    PUBLIC
-        flags
+        ${CMAKE_SOURCE_DIR}/flags
 )
 
 add_library(parser_generated
