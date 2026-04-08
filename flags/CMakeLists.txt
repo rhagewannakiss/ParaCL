@@ -1,136 +1,60 @@
-add_library(flags INTERFACE)
+function(add_paracl_compile_options target_name)
+    target_compile_features("${target_name}"
+        PRIVATE
+            cxx_std_20
+    )
 
-target_compile_features(flags
-    INTERFACE
-        cxx_std_20
-)
+    if(CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang")
+        target_compile_options("${target_name}"
+            PRIVATE
+                -fdiagnostics-color=always
 
+                -Wall
+                -Wextra
+                -Wpedantic
+                -Wshadow
+                -Wconversion
+                -Wsign-conversion
+                -Wunused
+                -Wformat=2
+                -Wnon-virtual-dtor
+                -Wswitch-enum
 
-target_compile_options(flags
-    INTERFACE
-        -fdiagnostics-color=always
+                -fstack-protector-strong
 
-        # -Wno-interference-size
+                $<$<CONFIG:Debug>:
+                    -Og
+                    -g3
+                    -ggdb
+                    -fsanitize=address,leak,undefined,float-divide-by-zero
+                    -fno-omit-frame-pointer
+                >
 
-        -Wall
-        -Wextra
-        -Wpedantic
-        -Wshadow
-        -Wconversion
-        -Wsign-conversion
-        -Wunused
-        -Wformat=2
-        -Wnon-virtual-dtor
-        -Wswitch-enum
+                $<$<CONFIG:Release>:
+                    -g
+                    -O2
+                    -march=native
+                    -flto
+                >
+        )
 
-        -fstack-protector-strong # inserts checks for buffer overflow
-        # -fPIE -pie
+        target_link_options("${target_name}"
+            PRIVATE
+                -rdynamic
 
-        $<$<CONFIG:Debug>:
-            -Og
-            -g3
-            -ggdb
-            -fsanitize=address,leak,undefined,float-divide-by-zero
-            -fno-omit-frame-pointer
-        >
+                $<$<CONFIG:Debug>:
+                    -fsanitize=address,leak,undefined,float-divide-by-zero
+                >
 
-        $<$<CONFIG:Release>:
-            -g
-            -O2
-            -march=native
-            -flto
-            -DNDEBUG
-        >
-)
+                $<$<CONFIG:Release>:
+                    -flto
+                >
+        )
 
-target_link_options(flags
-    INTERFACE
-        -fdiagnostics-color=always
+        target_compile_definitions("${target_name}"
+            PRIVATE
+                $<$<CONFIG:Release>:NDEBUG>
+        )
+    endif()
 
-        -Wall
-        -Wextra
-        # -fPIE -pie
-        -rdynamic
-
-        $<$<CONFIG:Debug>:
-            -Og
-            -g3
-            -ggdb
-            -fsanitize=address,leak,undefined,float-divide-by-zero
-            -fno-omit-frame-pointer
-        >
-
-        $<$<CONFIG:Release>:
-            -g
-            -O2
-            -march=native
-            -flto
-        >
-)
-
-add_library(flags_test INTERFACE)
-
-target_compile_features(flags_test
-    INTERFACE
-        cxx_std_20
-)
-
-target_compile_options(flags_test
-    INTERFACE
-        -fdiagnostics-color=always
-
-        # -Wno-interference-size
-
-        -Wall
-        -Wextra
-        -Wpedantic
-        -Wshadow
-        -Wconversion
-        -Wsign-conversion
-        -Wunused
-        -Wformat=2
-        -Wnon-virtual-dtor
-        -Wswitch-enum
-
-        -fstack-protector-strong
-        # -fPIE -pie
-
-        $<$<CONFIG:Debug>:
-            -Og
-            -g3
-            -ggdb
-            -fsanitize=address,leak,undefined,float-divide-by-zero
-            -fno-omit-frame-pointer
-        >
-
-        $<$<CONFIG:Release>:
-            -g
-            -Og
-            -march=native
-            -DNDEBUG
-        >
-)
-
-target_link_options(flags_test
-    INTERFACE
-        -fdiagnostics-color=always
-
-        -Wall
-        -Wextra
-        # -fPIE -pie
-        -rdynamic
-
-        $<$<CONFIG:Debug>:
-            -Og
-            -g3
-            -ggdb
-            -fsanitize=address,leak,undefined,float-divide-by-zero
-            -fno-omit-frame-pointer
-        >
-
-        $<$<CONFIG:Release>:
-            -g
-            -Og
-            -march=native
-        >
-)
+endfunction()

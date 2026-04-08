@@ -1,1 +1,1 @@
-test/e2e/invalid_progs/redeclare.pcl:3:1: error: Variable x already declared
+test/e2e/invalid_progs/redeclare.pcl:3:1: error: Variable 'x' already declared in this scope
