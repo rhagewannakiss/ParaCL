@@ -36,27 +36,29 @@ void SemanticChecker::leaveScope(const SourceRange& loc)
     scopes_.pop_back();
 }
 
-void SemanticChecker::declareVariable(const std::string& name,
+void SemanticChecker::declareVariable(std::string_view name,
                                       const SourceRange& loc)
 {
+    const std::string key(name);
     auto& cur = scopes_.back();
-    if (cur.find(name) != cur.end()) {
-        addError(loc, "Variable '" + name + "' already declared in this scope");
+    if (cur.find(key) != cur.end()) {
+        addError(loc, "Variable '" + key + "' already declared in this scope");
         return;
     }
-    cur.insert(name);
+    cur.insert(key);
 }
 
-bool SemanticChecker::isDeclared(const std::string& name) const
+bool SemanticChecker::isDeclared(std::string_view name) const
 {
+    const std::string key(name);
     for (auto it = scopes_.rbegin(); it != scopes_.rend(); ++it) {
-        if (it->find(name) != it->end())
+        if (it->find(key) != it->end())
             return true;
     }
     return false;
 }
 
-void SemanticChecker::addError(const SourceRange& loc, const std::string& msg)
+void SemanticChecker::addError(const SourceRange& loc, std::string_view msg)
 {
     errors_.push_back(err::format_error(loc, msg));
 }
@@ -64,7 +66,8 @@ void SemanticChecker::addError(const SourceRange& loc, const std::string& msg)
 void SemanticChecker::visit(VarNode& node)
 {
     if (!isDeclared(node.name())) {
-        addError(node.location(), "Undefined variable: " + node.name());
+        addError(node.location(),
+                 "Undefined variable: " + std::string(node.name()));
     }
 }
 

@@ -9,6 +9,7 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <vector>
 
 namespace ast {
@@ -145,11 +146,11 @@ public:
         children_.push_front(std::move(child));
     }
 
-    const std::deque<NodePtr>& children() const
+    const std::deque<NodePtr>& children() const&
     {
         return children_;
     }
-    std::deque<NodePtr>& children()
+    std::deque<NodePtr>& children() &
     {
         return children_;
     }
@@ -158,7 +159,7 @@ public:
     {
         loc_ = loc;
     }
-    const SourceRange& location() const
+    const SourceRange& location() const&
     {
         return loc_;
     }
@@ -494,7 +495,7 @@ public:
     VarNode(VarNode&& other) noexcept = default;
     VarNode& operator=(VarNode&& other) noexcept = default;
 
-    const std::string& name() const
+    std::string_view name() const&
     {
         return name_;
     }
@@ -1337,7 +1338,7 @@ public:
         add_child(std::move(statement));
     }
 
-    const std::deque<NodePtr>& statements() const
+    const std::deque<NodePtr>& statements() const&
     {
         return children();
     }
@@ -1414,7 +1415,7 @@ public:
         }
     }
 
-    const std::string& name() const
+    std::string_view name() const&
     {
         return name_;
     }
@@ -1488,7 +1489,7 @@ public:
     }
 };
 
-class AST
+class AST final
 {
 public:
     using NodePtr = BaseNode::NodePtr;

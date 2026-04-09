@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstdint>
+#include <format>
 #include <limits>
 #include <string>
 
@@ -32,8 +33,7 @@ struct SourceRange
         if (!has_gcc_location()) {
             return "";
         }
-        return file + ":" + std::to_string(begin_line) + ":" +
-               std::to_string(begin_column);
+        return std::format("{}:{}:{}", file, begin_line, begin_column);
     }
 };
 

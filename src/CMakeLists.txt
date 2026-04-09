@@ -23,6 +23,8 @@ add_library(paracl_core
         interpeter/detail/VarTable.cpp
 )
 
+add_paracl_compile_options(paracl_core)
+
 target_include_directories(paracl_core
     PUBLIC
         ${CMAKE_SOURCE_DIR}/include
@@ -33,6 +35,11 @@ add_library(parser_generated
     OBJECT
         ${BISON_Parser_OUTPUTS}
         ${FLEX_Lexer_OUTPUTS}
+)
+
+target_compile_features(parser_generated
+    PRIVATE
+        cxx_std_20
 )
 
 target_include_directories(parser_generated
@@ -51,6 +58,8 @@ add_library(parser_lib
         parser/scanner_location_bridge.cpp
 )
 
+add_paracl_compile_options(parser_lib)
+
 target_include_directories(parser_lib
     SYSTEM PUBLIC
         ${CMAKE_CURRENT_BINARY_DIR}
@@ -66,6 +75,8 @@ target_link_libraries(parser_lib
 add_executable(paracl_cli
     main.cpp
 )
+
+add_paracl_compile_options(paracl_cli)
 
 set_target_properties(paracl_cli PROPERTIES
     OUTPUT_NAME paracl-cli

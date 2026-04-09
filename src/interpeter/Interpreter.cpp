@@ -470,7 +470,7 @@ std::optional<std::string> Interpreter::validate_evaluable_node(
                 node.location(), "AssignNode condition lhs must be var"));
         }
         const auto* var = static_cast<const VarNode*>(assign->lhs());
-        return var->name();
+        return std::string(var->name());
     }
 
     if (node.node_type() == base_node_type::var_decl) {
@@ -484,7 +484,7 @@ std::optional<std::string> Interpreter::validate_evaluable_node(
             throw std::runtime_error(err::format_error(
                 node.location(), "Invalid VarDeclNode condition"));
         }
-        return decl->name();
+        return std::string(decl->name());
     }
 
     switch (node.node_type()) {

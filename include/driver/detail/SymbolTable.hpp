@@ -2,6 +2,7 @@
 
 #include <stdexcept>
 #include <string>
+#include <string_view>
 #include <unordered_set>
 #include <vector>
 
@@ -34,29 +35,31 @@ public:
         scopes_.pop_back();
     }
 
-    void declare_in_cur_scope(const std::string& name,
+    void declare_in_cur_scope(std::string_view name,
                               const SourceRange& loc = {})
     {
+        const std::string key(name);
         auto& cur = scopes_.back();
-        const auto iter = cur.find(name);
+        const auto iter = cur.find(key);
         if (iter != cur.end()) {
             throw std::runtime_error(err::format_error(
-                loc, "Variable " + name + " already declared"));
+                loc, "Variable " + key + " already declared"));
         }
-        cur.insert(name);
+        cur.insert(key);
     }
 
-    bool lookup(const std::string& name, const SourceRange& loc = {})
+    bool lookup(std::string_view name, const SourceRange& loc = {})
     {
+        const std::string key(name);
         for (size_t i = scopes_.size(); i-- > 0;) {
             auto& cur = scopes_[i];
-            const auto iter = cur.find(name);
+            const auto iter = cur.find(key);
             if (iter != cur.end()) {
                 return true;
             }
         }
         throw std::runtime_error(
-            err::format_error(loc, "Undefined variable: " + name));
+            err::format_error(loc, "Undefined variable: " + key));
     }
 };
 

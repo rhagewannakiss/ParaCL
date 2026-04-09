@@ -1,7 +1,5 @@
 #include "Visitors/detail/ScopeGuard.hpp"
 
-#include <exception>
-
 namespace ast::detail {
 
 ScopeGuard::ScopeGuard(VarTable& table, const SourceRange& location)
@@ -13,11 +11,7 @@ ScopeGuard::ScopeGuard(VarTable& table, const SourceRange& location)
 
 ScopeGuard::~ScopeGuard() noexcept
 {
-    try {
-        table_.leave_scope(location_);
-    } catch (...) {
-        std::terminate();
-    }
+    table_.leave_scope(location_);
 }
 
 } // namespace ast::detail

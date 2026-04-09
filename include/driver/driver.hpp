@@ -7,6 +7,7 @@
 #include <cstddef>
 #include <iostream>
 #include <string>
+#include <string_view>
 #include <utility>
 
 #include "AST/AST.hpp"
@@ -60,7 +61,7 @@ public:
         return tt;
     }
 
-    void add_error(const location& loc, const std::string& msg)
+    void add_error(const location& loc, std::string_view msg)
     {
         auto range = to_source_range(loc);
         std::cerr << err::format_error(range, msg) << std::endl;
@@ -85,7 +86,7 @@ public:
         loc_.step();
     }
 
-    const location& get_location() const
+    const location& get_location() const&
     {
         return loc_;
     }
@@ -95,7 +96,7 @@ public:
         ast_.set_root(std::move(root));
     }
 
-    const ast::AST& get_ast() const
+    const ast::AST& get_ast() const&
     {
         return ast_;
     }
