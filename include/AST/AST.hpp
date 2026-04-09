@@ -1489,7 +1489,7 @@ public:
     }
 };
 
-class AST
+class AST final
 {
 public:
     using NodePtr = BaseNode::NodePtr;
